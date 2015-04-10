@@ -11,6 +11,7 @@ public class SearchResult {
 	private class Result {
 		private AbstractIRDoc doc;
 		private double score;
+
 		
 //		@Override
 //		public int hashCode() {
@@ -65,17 +66,24 @@ public class SearchResult {
 		return String.format("topic%d Q0 %s %d %f %s", nr, r.doc.getName(), i, r.score, runName);
 	}
 
-	public void add(IndexValue b) {
-		for(Map.Entry<AbstractIRDoc, Integer> entry : b.getMapCounts().entrySet()) {
+	public void add(IndexValue iv) {
+		for(Map.Entry<AbstractIRDoc, Integer> entry : iv.getMapCounts().entrySet()) {
 			Result r = results.get(entry.getKey());
 			if(r == null) {
 				r = new Result();
 				r.doc = entry.getKey();
-				r.score = entry.getValue(); //TODO score
+				r.score = calcScore(entry); 
 				results.put(entry.getKey(), r);
 			} else {
-				r.score += entry.getValue();
+				r.score += calcScore(entry);//tf = sum(1 + log(tf));
 			}
 		}
+	}
+
+	/**
+	 * entry-score = 1 + log(tf)
+	 */
+	private double calcScore(Map.Entry<AbstractIRDoc, Integer> entry) {
+		return 1 + Math.log10(entry.getValue());
 	}
 }

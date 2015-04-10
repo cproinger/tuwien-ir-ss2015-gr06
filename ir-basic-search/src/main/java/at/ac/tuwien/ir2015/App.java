@@ -53,7 +53,7 @@ public class App {
 	}
 	/**
 	 * mein laptop (cproinger) is schon alt und einmal hat er sich abgeschaltet vermutlich
-	 * weil er zu heiß wurde wegen der hohen cpu-last. Könnte so ein
+	 * weil er zu heiÃŸ wurde wegen der hohen cpu-last. KÃ¶nnte so ein
 	 * System-property angeben welches z.B. alle x files eine pause macht. 
 	 * 
 	 * aber momentan gehts eh, mal schaun. 
@@ -69,7 +69,7 @@ public class App {
 	/**
 	 * change by specifying zip file, for example -Dzip=X/z.zip
 	 */
-	private static String docs = System.getProperty(IR_ZIP, 
+	private String docs = System.getProperty(IR_ZIP, 
 			"e:/tu/information retrieval/20_newsgroups_subset.zip");
 	
 
