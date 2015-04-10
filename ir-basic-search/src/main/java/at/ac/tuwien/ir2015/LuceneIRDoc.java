@@ -59,7 +59,7 @@ public class LuceneIRDoc extends AbstractIRDoc {
 				//String t = stream.reflectAsString(true);
 				//System.out.println(att.toString());
 				String curr = att.toString();
-				System.out.println(curr);
+				//System.out.println(curr);
 				counts.add(curr);
 				if(last != null) {
 					bicounts.add(last + " " + curr);
