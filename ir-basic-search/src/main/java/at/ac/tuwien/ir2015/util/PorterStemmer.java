@@ -1,4 +1,4 @@
-package at.ac.tuwien.ir2015;
+package at.ac.tuwien.ir2015.util;
 
 /**
 

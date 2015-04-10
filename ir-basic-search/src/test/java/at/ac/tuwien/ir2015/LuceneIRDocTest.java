@@ -17,7 +17,7 @@ public class LuceneIRDocTest {
 		irDoc.process();
 		irDoc2.process();
 		
-		BagOfWords bow = new BagOfWords();
+		InvertedIndex bow = new InvertedIndex();
 		bow.add(irDoc);
 		bow.add(irDoc2);
 		

@@ -7,16 +7,27 @@ import java.util.Scanner;
 
 import org.apache.lucene.analysis.Tokenizer;
 
+import at.ac.tuwien.ir2015.util.CountingMap;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
 
+@Deprecated
 public class OpenNLPIRDoc extends AbstractIRDoc {
+	
+
+	private static final String INVALID_WORD_REG_EXP = "^\\W+";
+	private static final String TOKEN_STRIP_REG_EXP = "^\\W+|\\W+$";
+	private static final String VALID_TOPIC_REG_EXP = "^[a-zA-Z0-9]+$";
+	
+
 	
     public OpenNLPIRDoc(String name, InputStream is) {
 		super(name, is);
 	}
 
-	public CountingMap process() {
+    @Override
+	public void process() {
+    	this.counts = new CountingMap();
 		try {
 			TokenizerModel model = new TokenizerModel(getClass().getResource("/en-token.bin"));
 			TokenizerME tok = new TokenizerME(model);
@@ -38,10 +49,10 @@ public class OpenNLPIRDoc extends AbstractIRDoc {
 				String lastToken = null;
 				for(String t : tokenized) {
 					String actToken = t;//t.intern();
-					bagOfWords.add(actToken);
+					counts.add(actToken);
 					
 					if(lastToken != null) {
-						biword.add(lastToken + " " + actToken);
+						bicounts.add(lastToken + " " + actToken);
 					}
 					lastToken = actToken;
 				}
@@ -52,7 +63,7 @@ public class OpenNLPIRDoc extends AbstractIRDoc {
 			e.printStackTrace();
 		}
 		//System.out.println(tokens);
-		return bagOfWords;
+		
 	}
 	
 

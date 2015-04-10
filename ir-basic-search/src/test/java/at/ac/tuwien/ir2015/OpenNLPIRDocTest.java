@@ -12,6 +12,6 @@ public class OpenNLPIRDocTest {
 	@Test
 	public void test() {
 		OpenNLPIRDoc doc = new OpenNLPIRDoc("test", getClass().getResourceAsStream(ALT_ATHEISM_54254_TXT));
-		System.out.println(doc.process());
+		System.out.println(doc.getCounts());
 	}
 }

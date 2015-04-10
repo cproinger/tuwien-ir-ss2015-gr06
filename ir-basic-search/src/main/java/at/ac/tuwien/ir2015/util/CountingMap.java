@@ -1,8 +1,8 @@
-package at.ac.tuwien.ir2015;
+package at.ac.tuwien.ir2015.util;
 
-import java.util.TreeMap;
+import java.util.HashMap;
 
-public class CountingMap extends TreeMap<String, Integer> {
+public class CountingMap extends HashMap<String, Integer> {
 
 	private static final long serialVersionUID = 1L;
 

@@ -24,6 +24,10 @@ public class IndexValue {
 	public String toString() {
 		return "IndexValue [sum=" + sum + ", mapCounts=" + mapCounts + "]";
 	}
+
+	public Map<AbstractIRDoc, Integer> getMapCounts() {
+		return mapCounts;
+	}
 	
 	
 }

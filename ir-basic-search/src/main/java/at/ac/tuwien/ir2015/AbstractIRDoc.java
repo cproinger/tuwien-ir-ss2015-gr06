@@ -1,18 +1,16 @@
 package at.ac.tuwien.ir2015;
 
 import java.io.InputStream;
+import java.util.Map;
 
-public class AbstractIRDoc {
+import at.ac.tuwien.ir2015.util.CountingMap;
 
-	private static final String INVALID_WORD_REG_EXP = "^\\W+";
-	private static final String TOKEN_STRIP_REG_EXP = "^\\W+|\\W+$";
-	private static final String VALID_TOPIC_REG_EXP = "^[a-zA-Z0-9]+$";
-	
+public abstract class AbstractIRDoc {
 	protected final String name;
 	protected final InputStream is;
 	
-	protected CountingMap bagOfWords = new CountingMap();
-	protected CountingMap biword = new CountingMap();
+	protected CountingMap counts;
+	protected CountingMap bicounts = new CountingMap();
 
 	public AbstractIRDoc(String name, InputStream is) {
 		this.name = name;
@@ -27,4 +25,14 @@ public class AbstractIRDoc {
 	public String getName() {
 		return name;
 	}
+
+	public Map<String, Integer> getCounts() {
+		if(counts == null) {
+			//sicherheitshalber implizit verarbeiten falls das noch nicht passiert ist. 
+			process();
+		}
+		return counts;
+	}
+	
+	public abstract void process();
 }
