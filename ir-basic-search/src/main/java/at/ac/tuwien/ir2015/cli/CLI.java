@@ -20,6 +20,7 @@ public class CLI {
 		options.addOption("?", "help", false, "display the help text");
 		options.addOption("i", "index", true, "index a zip-file containing documents");
 		options.addOption("n", "runName", true, "name of the search run, default is empty string");
+		options.addOption("d", "databaseFile", true, "database file location default is './ir_db'");
 	}
 	
 	public static void main(String[] args) throws ZipException, IOException {
@@ -33,19 +34,20 @@ public class CLI {
 				printHelp();
 				return;
 			}
-			App app = new App();
-			if(cmd.hasOption("i")) {
-				String documentCollectionFile = cmd.getOptionValue("i");
-				app.index(documentCollectionFile);
-			}
-			
-			if(cmd.hasOption("s")) {
-				String runName = "";
-				if(cmd.hasOption("n")) {
-					runName = cmd.getOptionValue("n");
+			try(App app = new App();) {
+				if(cmd.hasOption("i")) {
+					String documentCollectionFile = cmd.getOptionValue("i");
+					app.index(documentCollectionFile);
 				}
-				String topicFile = cmd.getOptionValue("s");
-				app.search(topicFile, runName);
+				
+				if(cmd.hasOption("s")) {
+					String runName = "";
+					if(cmd.hasOption("n")) {
+						runName = cmd.getOptionValue("n");
+					}
+					String topicFile = cmd.getOptionValue("s");
+					app.search(topicFile, runName);
+				}
 			}
 			
 			

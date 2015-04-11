@@ -3,6 +3,7 @@ package at.ac.tuwien.ir2015;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Map;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -20,8 +21,11 @@ import at.ac.tuwien.ir2015.util.CountingMap;
 
 public class LuceneIRDoc extends AbstractIRDoc {
 
+	private final InputStream is;
+	
 	public LuceneIRDoc(String name, InputStream is) {
-		super(name, is);
+		super(name);
+		this.is = is;
 	}
 
 	/**
@@ -69,7 +73,6 @@ public class LuceneIRDoc extends AbstractIRDoc {
 		
 	}
 	
-	@Override
 	public void process() {
 		this.counts = new CountingMap();
 		//Tokenizer tokenizer = new WhitespaceTokenizer();
@@ -100,5 +103,14 @@ public class LuceneIRDoc extends AbstractIRDoc {
 			throw new RuntimeException("unexpected IO Exception", e);
 		}
 		//PorterStemFilter stemFilter = new PorterStemFilter(in);
+	}
+	
+	@Override
+	public Map<String, Integer> getCounts() {
+		if(counts == null) {
+			//sicherheitshalber implizit verarbeiten falls das noch nicht passiert ist. 
+			process();
+		}
+		return counts;
 	}
 }

@@ -1,5 +1,6 @@
 package at.ac.tuwien.ir2015;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +22,7 @@ import org.apache.commons.io.input.ReaderInputStream;
  * @author cproinger
  *
  */
-public class App {
+public class App implements Closeable {
 	
 	private class Reader implements Consumer<ZipEntry> {
 
@@ -108,9 +109,15 @@ public class App {
 		app.search(doc, "test");
 	}
 
-	private InvertedIndex bagOfWords = new InvertedIndex();
+	private InvertedIndex bagOfWords = new RDBMSInvertedIndex("bagOfWords");// InMemoryInvertedIndex();
 
-	private BlockingQueue<LuceneIRDoc> docQueue = new LinkedBlockingQueue<LuceneIRDoc>(20);
+	private BlockingQueue<AbstractIRDoc> docQueue = new LinkedBlockingQueue<AbstractIRDoc>(20);
+	
+	private class PoisonIRDoc extends AbstractIRDoc {
+		public PoisonIRDoc() {
+			super("test");
+		}
+	}
 
 	public void index(String documentCollectionFile) throws ZipException, IOException {
 		Thread t = new Thread() {
@@ -119,8 +126,15 @@ public class App {
 				AbstractIRDoc doc = null;
 				try {
 					while((doc = docQueue.take()) != null) {
-						System.out.println("adding to index: " + doc.getName()); 
-						bagOfWords.add(doc);
+						if(doc instanceof PoisonIRDoc)
+							break;
+						System.out.println("adding to index: " + doc.getName());
+						try {
+							bagOfWords.add(doc);
+						} catch (RuntimeException e) {
+							e.printStackTrace();
+							System.exit(1);//TODO
+						}
 					}
 				} catch (InterruptedException e) {
 					System.out.println("interrupted");
@@ -134,12 +148,13 @@ public class App {
 		try (ZipFile zip = new ZipFile(new File(documentCollectionFile));) {
 			Reader reader = new Reader(zip);
 			zip.stream()
+				.filter(p -> !p.isDirectory())
 				.parallel()
 				.forEach(reader);
 		}
 
-		t.interrupt();
 		try {
+			docQueue.put(new PoisonIRDoc());
 			t.join();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -149,23 +164,23 @@ public class App {
 	}
 
 	public void search(AbstractIRDoc doc, String runName) {
-		SearchResult sr = new SearchResult(doc.getName(), runName);
-		for(String s : doc.getCounts().keySet()) {
-			IndexValue b = bagOfWords.get(s);
-			if(b != null) {
-				//hit
-				sr.add(b);
-			}
-		}
-		System.out.println("search result: \n\n" 
-				 + sr.toString());
+		ISearchResult sr = bagOfWords.search(doc, runName);
+		System.out.print(sr.toString());
 	}
 
 	public void search(String topicFile, String runName) throws ZipException, IOException {
 		
 		try (ZipFile zip = new ZipFile(new File(topicFile));) {
 			Searcher searcher = new Searcher(zip, runName);
-			zip.stream().sequential().forEach(searcher);
+			zip.stream()
+				.filter(p -> !p.isDirectory())
+				.sequential()
+				.forEach(searcher);
 		}
+	}
+
+	@Override
+	public void close() {
+		Persistence.close(); 
 	}
 }

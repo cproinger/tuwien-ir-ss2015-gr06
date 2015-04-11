@@ -1,30 +1,11 @@
 package at.ac.tuwien.ir2015;
 
-import java.util.HashMap;
-import java.util.Map;
+public interface InvertedIndex {
 
-public class InvertedIndex {
+	public abstract void add(AbstractIRDoc doc);
 
-	private HashMap<String, IndexValue> map = new HashMap<String, IndexValue>();
+	public abstract IndexValue get(String s);
 
-	public void add(AbstractIRDoc doc) {
-		for(Map.Entry<String, Integer> entry : doc.getCounts().entrySet()) {
-			addEntry(doc, entry);
-		}
-	}
+	public abstract ISearchResult search(AbstractIRDoc doc, String runName);
 
-	private synchronized void addEntry(AbstractIRDoc doc, Map.Entry<String, Integer> entry) {
-		IndexValue value = map.get(entry.getKey());
-		if(value == null) {
-			value = new IndexValue(doc, entry.getValue());
-			map.put(entry.getKey(), value);
-		} else {
-			value.add(doc, entry.getValue());
-		}
-	}
-
-	public IndexValue get(String s) {
-		return map.get(s);
-	}
-	
 }

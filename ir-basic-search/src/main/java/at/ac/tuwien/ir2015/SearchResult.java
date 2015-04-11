@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-public class SearchResult {
+public class SearchResult implements ISearchResult  {
 
 	private class Result {
 		private AbstractIRDoc doc;
@@ -51,6 +51,9 @@ public class SearchResult {
 		this.runName = runName;
 	}
 
+	/* (non-Javadoc)
+	 * @see at.ac.tuwien.ir2015.ISearchResult#toString()
+	 */
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -68,7 +71,7 @@ public class SearchResult {
 	}
 
 	private String format(int i, Result r) {
-		return String.format("%s Q0 %s %d %f %s", topic, r.doc.getName(), i, r.score, runName);
+		return String.format(RESULT_FORMAT, topic, r.doc.getName(), i, r.score, runName);
 	}
 
 	public void add(IndexValue iv) {
@@ -84,6 +87,19 @@ public class SearchResult {
 			}
 		}
 	}
+//	
+//	public void add(AbstractIRDoc doc, double score) {
+//		
+//		Result r = results.get(doc);
+//		if(r == null) {
+//			r = new Result();
+//			r.doc = doc;
+//			r.score = score;
+//			results.put(doc, r);
+//		} else {
+//			r.score += score;//tf = sum(1 + log(tf));
+//		}
+//	}
 
 	/**
 	 * entry-score = 1 + log(tf)

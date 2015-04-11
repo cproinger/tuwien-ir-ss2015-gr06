@@ -1,20 +1,17 @@
 package at.ac.tuwien.ir2015;
 
-import java.io.InputStream;
 import java.util.Map;
 
 import at.ac.tuwien.ir2015.util.CountingMap;
 
 public abstract class AbstractIRDoc {
 	protected final String name;
-	protected final InputStream is;
 	
 	protected CountingMap counts;
 	protected CountingMap bicounts = new CountingMap();
 
-	public AbstractIRDoc(String name, InputStream is) {
+	public AbstractIRDoc(String name) {
 		this.name = name;
-		this.is = is;
 	}
 
 	@Override
@@ -27,12 +24,6 @@ public abstract class AbstractIRDoc {
 	}
 
 	public Map<String, Integer> getCounts() {
-		if(counts == null) {
-			//sicherheitshalber implizit verarbeiten falls das noch nicht passiert ist. 
-			process();
-		}
-		return counts;
+		return this.counts;
 	}
-	
-	public abstract void process();
 }
