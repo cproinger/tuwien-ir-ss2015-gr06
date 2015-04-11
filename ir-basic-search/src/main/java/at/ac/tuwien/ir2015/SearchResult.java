@@ -43,9 +43,14 @@ public class SearchResult {
 	};
 	
 	private HashMap<AbstractIRDoc, Result> results = new HashMap<AbstractIRDoc, Result>();
-	private String runName = "test"; //TODO
-	private int nr = 0; //TODO
+	private String runName;
+	private String topic;
 	
+	public SearchResult(String topic, String runName) {
+		this.topic = topic;
+		this.runName = runName;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -63,7 +68,7 @@ public class SearchResult {
 	}
 
 	private String format(int i, Result r) {
-		return String.format("topic%d Q0 %s %d %f %s", nr, r.doc.getName(), i, r.score, runName);
+		return String.format("%s Q0 %s %d %f %s", topic, r.doc.getName(), i, r.score, runName);
 	}
 
 	public void add(IndexValue iv) {

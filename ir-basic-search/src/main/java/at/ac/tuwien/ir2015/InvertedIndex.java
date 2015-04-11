@@ -3,9 +3,9 @@ package at.ac.tuwien.ir2015;
 import java.util.HashMap;
 import java.util.Map;
 
-public class InvertedIndex extends HashMap<String, IndexValue> {
+public class InvertedIndex {
 
-	private static final long serialVersionUID = 1L;
+	private HashMap<String, IndexValue> map = new HashMap<String, IndexValue>();
 
 	public void add(AbstractIRDoc doc) {
 		for(Map.Entry<String, Integer> entry : doc.getCounts().entrySet()) {
@@ -14,13 +14,17 @@ public class InvertedIndex extends HashMap<String, IndexValue> {
 	}
 
 	private synchronized void addEntry(AbstractIRDoc doc, Map.Entry<String, Integer> entry) {
-		IndexValue value = get(entry.getKey());
+		IndexValue value = map.get(entry.getKey());
 		if(value == null) {
 			value = new IndexValue(doc, entry.getValue());
-			put(entry.getKey(), value);
+			map.put(entry.getKey(), value);
 		} else {
 			value.add(doc, entry.getValue());
 		}
+	}
+
+	public IndexValue get(String s) {
+		return map.get(s);
 	}
 	
 }

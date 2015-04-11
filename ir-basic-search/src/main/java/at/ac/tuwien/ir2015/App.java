@@ -25,6 +25,12 @@ public class App {
 	
 	private class Reader implements Consumer<ZipEntry> {
 
+		private final ZipFile zip;
+
+		public Reader(ZipFile zip) {
+			this.zip = zip;
+		}
+
 		@Override
 		public void accept(ZipEntry t) {
 			String name = t.getName();
@@ -51,6 +57,27 @@ public class App {
 			}
 		}		
 	}
+
+	private class Searcher implements Consumer<ZipEntry> {
+
+		private final ZipFile zip;
+		private final String runName;
+
+		public Searcher(ZipFile zip, String runName) {
+			this.zip = zip;
+			this.runName = runName;
+		}
+		
+		@Override
+		public void accept(ZipEntry t) {
+			try (InputStream is = zip.getInputStream(t)) {
+				search(new LuceneIRDoc(t.getName(), is), runName);
+			} catch (IOException e) {
+				throw new RuntimeException("error searching " + t.getName(), e);
+			}
+		}
+	}
+	
 	/**
 	 * mein laptop (cproinger) is schon alt und einmal hat er sich abgeschaltet vermutlich
 	 * weil er zu heiß wurde wegen der hohen cpu-last. Könnte so ein
@@ -59,19 +86,9 @@ public class App {
 	 * aber momentan gehts eh, mal schaun. 
 	 */
 	private static final String IR_PAUSE = "ir.pause";
-	
+	private static final String IR_RUN_NAME = "ir.runName";
+
 	private static final String skip = System.getProperty("ir.skip");
-	
-	public static final String IR_TOPIC_FILE = "ir.topicFile";
-	
-	public static final String IR_ZIP = "ir.zip";
-	
-	/**
-	 * change by specifying zip file, for example -Dzip=X/z.zip
-	 */
-	private String docs = System.getProperty(IR_ZIP, 
-			"e:/tu/information retrieval/20_newsgroups_subset.zip");
-	
 
 	static int getMaxResults() {
 		return Integer.parseInt(System.getProperty("ir.maxResults", "100"));
@@ -80,7 +97,7 @@ public class App {
 	public static void main(String[] args) throws ZipException, IOException, ParseException {
 		long start = System.currentTimeMillis();
 		App app = new App();
-		app.index();
+		app.index("e:/tu/information retrieval/20_newsgroups_subset.zip");
 		long took = System.currentTimeMillis() - start;
 		System.out.println("took " + (took / 1000) + " seconds");
 		
@@ -88,29 +105,14 @@ public class App {
 		
 		LuceneIRDoc doc = new LuceneIRDoc("test", new ReaderInputStream(sr));
 		doc.process();
-		app.search(doc);
+		app.search(doc, "test");
 	}
 
 	private InvertedIndex bagOfWords = new InvertedIndex();
 
 	private BlockingQueue<LuceneIRDoc> docQueue = new LinkedBlockingQueue<LuceneIRDoc>(20);
 
-	private ZipFile zip;
-	
-	public void search(AbstractIRDoc doc) {
-		SearchResult sr = new SearchResult();
-		for(String s : doc.getCounts().keySet()) {
-			IndexValue b = bagOfWords.get(s);
-			if(b != null) {
-				//hit
-				sr.add(b);
-			}
-		}
-		System.out.println("search result: \n\n" 
-				 + sr.toString());
-	}
-
-	private void index() throws ZipException, IOException {
+	public void index(String documentCollectionFile) throws ZipException, IOException {
 		Thread t = new Thread() {
 			@Override
 			public void run() {
@@ -128,14 +130,12 @@ public class App {
 		};
 		t.start();
 		
-		this.zip = new ZipFile(new File(docs));
-		try {
-			Reader reader = new Reader();
+		
+		try (ZipFile zip = new ZipFile(new File(documentCollectionFile));) {
+			Reader reader = new Reader(zip);
 			zip.stream()
 				.parallel()
 				.forEach(reader);
-		} finally {
-			this.zip.close();
 		}
 
 		t.interrupt();
@@ -146,5 +146,26 @@ public class App {
 			e.printStackTrace();
 		}
 
+	}
+
+	public void search(AbstractIRDoc doc, String runName) {
+		SearchResult sr = new SearchResult(doc.getName(), runName);
+		for(String s : doc.getCounts().keySet()) {
+			IndexValue b = bagOfWords.get(s);
+			if(b != null) {
+				//hit
+				sr.add(b);
+			}
+		}
+		System.out.println("search result: \n\n" 
+				 + sr.toString());
+	}
+
+	public void search(String topicFile, String runName) throws ZipException, IOException {
+		
+		try (ZipFile zip = new ZipFile(new File(topicFile));) {
+			Searcher searcher = new Searcher(zip, runName);
+			zip.stream().sequential().forEach(searcher);
+		}
 	}
 }

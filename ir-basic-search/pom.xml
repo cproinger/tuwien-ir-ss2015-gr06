@@ -38,7 +38,20 @@
 
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.5.1</version>
+				<version>2.5.3</version>
+				<configuration>
+					<configuration>
+						<finalName>ir</finalName>
+						<descriptorRefs>
+							<descriptorRef>jar-with-dependencies</descriptorRef>
+						</descriptorRefs>
+						<archive>
+							<manifest>
+								<mainClass>at.ac.tuwien.ir2015.cli.CLI</mainClass>
+							</manifest>
+						</archive>
+					</configuration>
+				</configuration>
 				<executions>
 					<execution>
 						<id>ir-cli</id>
@@ -64,15 +77,16 @@
 	</build>
 
 	<dependencies>
-		<dependency>
-			<groupId>org.apache.opennlp</groupId>
-			<artifactId>opennlp-tools</artifactId>
-			<version>1.5.3</version>
-		</dependency>
+		<!-- <dependency> -->
+		<!-- <groupId>org.apache.opennlp</groupId> -->
+		<!-- <artifactId>opennlp-tools</artifactId> -->
+		<!-- <version>1.5.3</version> -->
+		<!-- </dependency> -->
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>commons-cli</groupId>
@@ -91,5 +105,18 @@
 			<artifactId>commons-io</artifactId>
 			<version>2.4</version>
 		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.4.186</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.1</version>
+		</dependency>
+
 	</dependencies>
 </project>
