@@ -22,7 +22,7 @@ public class LuceneIRDocTest {
 		irDoc.process();
 		irDoc2.process();
 		
-		InvertedIndex bow = new InMemoryInvertedIndex();
+		InvertedIndex bow = new InMemoryInvertedIndex(IndexType.BAGOFWORDS);
 		bow.add(irDoc);
 		bow.add(irDoc2);
 		

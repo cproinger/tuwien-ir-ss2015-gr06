@@ -18,6 +18,7 @@ import org.apache.commons.dbcp2.DelegatingStatement;
 
 public class Persistence {
 
+	public static final String IR_DB_FILE = "ir.dbFile";
 	private static volatile BasicDataSource dataSource = null;
 	
 	public static DataSource getDataSource() {
@@ -25,7 +26,7 @@ public class Persistence {
 			synchronized (Persistence.class) {
 				if(dataSource == null) {					
 					BasicDataSource ds = new BasicDataSource();
-					ds.setUrl(System.getProperty("ir.dbFile", "jdbc:h2:file:./target/ir_db"));
+					ds.setUrl(System.getProperty(IR_DB_FILE, "jdbc:h2:file:./target/ir_db;MAX_COMPACT_TIME=10000"));//;CACHE_SIZE=10240"));
 					ds.setUsername("sa");
 					ds.setMinIdle(1);
 					ds.setInitialSize(1);

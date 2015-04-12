@@ -5,6 +5,12 @@ import java.util.Map;
 
 public class InMemoryInvertedIndex implements InvertedIndex {
 
+	private IndexType it;
+
+	public InMemoryInvertedIndex(IndexType it) {
+		this.it = it;
+	}
+	
 	private HashMap<String, IndexValue> map = new HashMap<String, IndexValue>();
 
 	/* (non-Javadoc)
@@ -38,7 +44,7 @@ public class InMemoryInvertedIndex implements InvertedIndex {
 	@Override
 	public ISearchResult search(AbstractIRDoc doc, String runName) {
 		SearchResult sr = new SearchResult(doc.getName(), runName);
-		for(String s : doc.getCounts().keySet()) {
+		for(String s : it.getCounts(doc).keySet()) {
 			IndexValue b = get(s);
 			if(b != null) {
 				//hit

@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
 import java.util.Map;
 
 public class RDBMSInvertedIndex implements InvertedIndex {
@@ -20,19 +21,19 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		}
 	}
 
-	private static final String SELECT_POSTING_FOR_DOC = "from {0}posting p "
-						+ "		join {0}occurrence o on o.posting_id = p.id "
+	private static final String SELECT_DICTIONARY_FOR_DOC = "from {0}DICTIONARY p "
+						+ "		join {0}POSTING o on o.DICTIONARY_id = p.id "
 						+ "		join document d on d.id = o.document_id "
 						+ "where p.value = ? ";
 	
-	private final String name;//TODO use separate tables. 
+	private IndexType it;
 	
-	public RDBMSInvertedIndex(String name) {
-		this.name = name;	
+	public RDBMSInvertedIndex(IndexType it) {
+		this.it = it;
 		
 		try(Connection con = getConnection();
 				Statement stmt = con.createStatement();) {
-			ResultSet rs = stmt.executeQuery("SELECT count(*) FROM INFORMATION_SCHEMA.TABLES where table_name = '{0}POSTING'");
+			ResultSet rs = stmt.executeQuery("SELECT count(*) FROM INFORMATION_SCHEMA.TABLES where table_name = '{0}DICTIONARY'");
 			rs.next();
 			int tableCount = rs.getInt(1);
 			if(tableCount < 1) {
@@ -42,23 +43,24 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 					stmt.execute("CREATE TABLE document ("
 							+ "	id identity primary key , name varchar(255) "
 							+ ");");
+					stmt.execute("CREATE UNIQUE INDEX idx_docname on document(name);");
 				}
 				
-				stmt.execute("CREATE TABLE {0}posting ("
+				stmt.execute("CREATE TABLE {0}DICTIONARY ("
 						+ " id identity primary key , value varchar(255)" //hm to short???
 						
 						+ ");");
 				
-				stmt.execute("CREATE TABLE {0}occurrence ("
-						+ " posting_id bigint references {0}posting(id), "
+				stmt.execute("CREATE TABLE {0}POSTING ("
+						+ " DICTIONARY_id bigint references {0}DICTIONARY(id), "
 						+ " document_id bigint references document(id), "
 						+ " times int not null default 0, "
-						+ " primary key(posting_id, document_id)"
+						+ " primary key(DICTIONARY_id, document_id)"
 						+ ")");
 				
-				stmt.execute("CREATE UNIQUE INDEX idx_{0}docname on {0}document(name);");
-				stmt.execute("CREATE UNIQUE INDEX idx_{0}posting on {0}posting(value);");
-				stmt.execute("CREATE INDEX idx_{0}posting_occurrence on {0}occurrence(posting_id);");
+				stmt.execute("CREATE UNIQUE INDEX idx_{0}DICTIONARY on {0}DICTIONARY(value);");
+				
+				stmt.execute("CREATE INDEX idx_{0}DICTIONARY_POSTING on {0}POSTING(DICTIONARY_id);");
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException("error initializing db", e);
@@ -66,51 +68,74 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 	}
 
 	private Connection getConnection() throws SQLException {
-		return Persistence.getDataSource(name.toUpperCase() + "_").getConnection();
+		return Persistence.getDataSource(it.toString().toUpperCase() + "_").getConnection();
 	}
 
 	@Override
 	public void add(AbstractIRDoc doc) {
-		try(Connection con = getConnection();) {			
+		try(Connection con = getConnection();) {
+			Long docId = null;
 			try (PreparedStatement pstmt = con.prepareStatement(
-					"merge into document(name) KEY(name) values(?)")) {
+					"merge into document(name) KEY(name) values(?)", Statement.RETURN_GENERATED_KEYS)) {
 				pstmt.setString(1, doc.getName());
 				executeUpdateWithCheck(pstmt);
-			}
+				ResultSet rs = pstmt.getGeneratedKeys();
+				if(rs.next()) {
+					docId = rs.getLong(1);
+				}
+			} 
+//			catch(SQLException e) {
+//				if(e.getErrorCode() == 23505) {
+//					//duplicate
+//					e.printStackTrace();
+//					throw new RuntimeException("duplicate document")
+//				} else {
+//					throw e;
+//				}
+//			}
 			
-			for(Map.Entry<String, Integer> e : doc.getCounts().entrySet()) {				
-				try(
-						PreparedStatement pstmt = con.prepareStatement(
-								"merge into {0}posting(value) KEY(value) values(?)");
-						) {				
-					pstmt.setString(1, e.getKey());
-					executeUpdateWithCheck(pstmt);
+			String insOcc = "insert into {0}POSTING(DICTIONARY_id, document_id, times) "
+					//+ "	KEY(DICTIONARY_id, document_id) "
+					+ "	values("
+					+ "		(select id from {0}DICTIONARY where value = ?), "
+					+ (docId == 0 ? "		(select id from document where name = ?), " : "?, ")
+					+ "?"//+ "		(ifnull((select o.times " + SELECT_DICTIONARY_FOR_DOC + " and d.name = ?), 0) + 1)"
+					+ ")";
+			try(PreparedStatement occurence = con.prepareStatement(
+					insOcc);
+				PreparedStatement DICTIONARY = con.prepareStatement(
+						"merge into {0}DICTIONARY(value) KEY(value) values(?)");
+					) {		
+				for(Map.Entry<String, Integer> e : getCounts(doc).entrySet()) {	
+					if(!DICTIONARYs.contains(e.getKey())) {
+						DICTIONARY.setString(1, e.getKey());
+						executeUpdateWithCheck(DICTIONARY);
+						DICTIONARYs.add(e.getKey());
+					}
+					occurence.setString(1, e.getKey());
+					if(docId == 0)
+						occurence.setString(2, doc.getName());
+					else
+						occurence.setLong(2, docId);
+					occurence.setInt(3, e.getValue());
+	//					pstmt.setString(3, e.getKey());
+	//					pstmt.setString(4, doc.getName());
+					//executeUpdateWithCheck(pstmt);
+					occurence.addBatch();
 				}
-				
-				String sql = "merge into {0}occurrence(posting_id, document_id, times) "
-				+ "	KEY(posting_id, document_id) "
-				+ "	values("
-				+ "		(select id from {0}posting where value = ?), "
-				+ "		(select id from {0}document where name = ?), "
-				+ "?"//+ "		(ifnull((select o.times " + SELECT_POSTING_FOR_DOC + " and d.name = ?), 0) + 1)"
-				+ ")";
-				try(PreparedStatement pstmt = con.prepareStatement(
-						sql);
-				) {		
-					pstmt.setString(1, e.getKey());
-					pstmt.setString(2, doc.getName());
-					pstmt.setInt(3, e.getValue());
-//					pstmt.setString(3, e.getKey());
-//					pstmt.setString(4, doc.getName());
-					
-					executeUpdateWithCheck(pstmt);
-				}
+				occurence.executeBatch();
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException("data access exception for add", e);
 		}
 	}
 
+	private Map<String, Integer> getCounts(AbstractIRDoc doc) {
+		return it.getCounts(doc);
+	}
+
+	private HashSet<String> DICTIONARYs = new HashSet<>();
+	
 	private void executeUpdateWithCheck(PreparedStatement pstmt)
 			throws SQLException {
 		int c = pstmt.executeUpdate();
@@ -123,7 +148,7 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		try(Connection con = getConnection();
 			PreparedStatement pstmt = con.prepareStatement(
 					"select d.name AS D_NAME, o.times "
-					+ SELECT_POSTING_FOR_DOC
+					+ SELECT_DICTIONARY_FOR_DOC
 					+ "");
 			) {
 			pstmt.setString(1, s);
@@ -146,19 +171,19 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 	public ISearchResult search(AbstractIRDoc doc, String runName) {
 		String sql = " select top " + "100"
 				+ " count(logtf_p1), sum(logtf_p1) as score, name AS D_NAME from ( "
-				+ " select 1+ log(times) logtf_p1, d.name from {0}occurrence o "
+				+ " select 1+ log(times) logtf_p1, d.name from {0}POSTING o "
 				+ "    join document d on o.document_id = d.id "
-				+ "    join {0}posting p on p.id = o.posting_id "
+				+ "    join {0}DICTIONARY p on p.id = o.DICTIONARY_id "
 				+ " where p.value in (? :in) "
 				+ " ) as x "
 				+ " group by name "
 				+ " order by sum(logtf_p1) desc"; 
-		sql = sql.replace(":in", new String(new char[doc.getCounts().size() -1 ]).replace("\0", ", ?"));
+		sql = sql.replace(":in", new String(new char[getCounts(doc).size() -1 ]).replace("\0", ", ?"));
 		
 		try(Connection con = getConnection();
 				PreparedStatement pstmt = con.prepareStatement(sql)) {
 			int i = 1;
-			for(String s : doc.getCounts().keySet()) {
+			for(String s : getCounts(doc).keySet()) {
 				pstmt.setString(i++, s);
 			}			
 			SimpleSearchResult sr = new SimpleSearchResult();
@@ -185,7 +210,7 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		
 //		
 //		SearchResult sr = new SearchResult(doc.getName(), runName);
-//		System.out.println("counts: " + doc.getCounts().size());
+//		Logg.info("counts: " + doc.getCounts().size());
 //		for(String s : doc.getCounts().keySet()) {
 //			IndexValue b = get(s);
 //			if(b != null) {

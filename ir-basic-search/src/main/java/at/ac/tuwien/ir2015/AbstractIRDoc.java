@@ -8,7 +8,13 @@ public abstract class AbstractIRDoc {
 	protected final String name;
 	
 	protected CountingMap counts;
-	protected CountingMap bicounts = new CountingMap();
+	protected CountingMap bicounts;
+
+	public static final String IR_ANALYZER_CASE_FOLDING = "ir.analyzer.caseFolding";
+
+	public static final String IR_ANALYZER_STOPWORDS = "ir.analyzer.stopwords";
+
+	public static final String IR_ANALYZER_STEM = "ir.analyzer.stem";
 
 	public AbstractIRDoc(String name) {
 		this.name = name;
@@ -25,5 +31,9 @@ public abstract class AbstractIRDoc {
 
 	public Map<String, Integer> getCounts() {
 		return this.counts;
+	}
+
+	public Map<String, Integer> getBiCounts() {
+		return this.bicounts;
 	}
 }

@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
@@ -14,6 +16,8 @@ import java.util.zip.ZipFile;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.input.ReaderInputStream;
+
+import at.ac.tuwien.ir2015.util.Logg;
 
 /**
  * Main application class, is instantiated by the CLI
@@ -45,7 +49,7 @@ public class App implements Closeable {
 						return;
 				}
 				
-				System.out.println("reading: " + name);
+				Logg.info("reading: " + name);
 				LuceneIRDoc doc = new LuceneIRDoc(name, is);
 				doc.process();
 				try {
@@ -63,16 +67,18 @@ public class App implements Closeable {
 
 		private final ZipFile zip;
 		private final String runName;
+		private IndexType it;
 
-		public Searcher(ZipFile zip, String runName) {
+		public Searcher(ZipFile zip, String runName, IndexType it) {
 			this.zip = zip;
 			this.runName = runName;
+			this.it = it;
 		}
 		
 		@Override
 		public void accept(ZipEntry t) {
 			try (InputStream is = zip.getInputStream(t)) {
-				search(new LuceneIRDoc(t.getName(), is), runName);
+				search(new LuceneIRDoc(t.getName(), is), runName, it);
 			} catch (IOException e) {
 				throw new RuntimeException("error searching " + t.getName(), e);
 			}
@@ -100,27 +106,38 @@ public class App implements Closeable {
 		App app = new App();
 		app.index("e:/tu/information retrieval/20_newsgroups_subset.zip");
 		long took = System.currentTimeMillis() - start;
-		System.out.println("took " + (took / 1000) + " seconds");
+		Logg.info("took " + (took / 1000) + " seconds");
 		
 		StringReader sr = new StringReader("screen");
 		
 		LuceneIRDoc doc = new LuceneIRDoc("test", new ReaderInputStream(sr));
 		doc.process();
-		app.search(doc, "test");
+		app.search(doc, "test", IndexType.BAGOFWORDS);
 	}
 
-	private InvertedIndex bagOfWords = new RDBMSInvertedIndex("bagOfWords");// InMemoryInvertedIndex();
+	private final Map<IndexType, InvertedIndex> indices = new HashMap<IndexType, InvertedIndex>();
+	
+	public App() {
+		this(StorageType.INMEMORY);
+	}
+	
+	public App(StorageType st) {
+		for(IndexType it : IndexType.values()) {
+			indices.put(it, st.newInvertedIndex(it));
+		}
+	}
+	
 
 	private BlockingQueue<AbstractIRDoc> docQueue = new LinkedBlockingQueue<AbstractIRDoc>(20);
 	
 	private class PoisonIRDoc extends AbstractIRDoc {
 		public PoisonIRDoc() {
-			super("test");
+			super("poison");
 		}
 	}
 
 	public void index(String documentCollectionFile) throws ZipException, IOException {
-		Thread t = new Thread() {
+		Thread t = new Thread("Indexing-worker") {
 			@Override
 			public void run() {
 				AbstractIRDoc doc = null;
@@ -128,18 +145,21 @@ public class App implements Closeable {
 					while((doc = docQueue.take()) != null) {
 						if(doc instanceof PoisonIRDoc)
 							break;
-						System.out.println("adding to index: " + doc.getName());
+						Logg.info("adding to index: " + doc.getName());
 						try {
-							bagOfWords.add(doc);
+							for(InvertedIndex ii : indices.values()) {
+								ii.add(doc);
+							}
 						} catch (RuntimeException e) {
 							e.printStackTrace();
-							System.exit(1);//TODO
+							System.err.println("some shit happened, exiting!");
+							System.exit(1);
 						}
 					}
 				} catch (InterruptedException e) {
-					System.out.println("interrupted");
+					e.printStackTrace();
 				}
-				System.out.println("index done");
+				Logg.info("index done");
 			}
 		};
 		t.start();
@@ -163,20 +183,24 @@ public class App implements Closeable {
 
 	}
 
-	public void search(AbstractIRDoc doc, String runName) {
-		ISearchResult sr = bagOfWords.search(doc, runName);
+	public void search(AbstractIRDoc doc, String runName, IndexType it) {
+		ISearchResult sr = indices.get(it).search(doc, runName);
 		System.out.print(sr.toString());
 	}
 
-	public void search(String topicFile, String runName) throws ZipException, IOException {
+	public void search(String topicFile, String runName, IndexType it) throws ZipException, IOException {
 		
 		try (ZipFile zip = new ZipFile(new File(topicFile));) {
-			Searcher searcher = new Searcher(zip, runName);
+			Searcher searcher = new Searcher(zip, runName, it);
 			zip.stream()
 				.filter(p -> !p.isDirectory())
 				.sequential()
 				.forEach(searcher);
 		}
+	}
+	
+	public void search(String topicFile, String runName) throws ZipException, IOException {
+		search(topicFile, runName, IndexType.BAGOFWORDS);
 	}
 
 	@Override

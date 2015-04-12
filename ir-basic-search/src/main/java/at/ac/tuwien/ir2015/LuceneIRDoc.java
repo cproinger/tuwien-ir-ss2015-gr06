@@ -44,10 +44,6 @@ public class LuceneIRDoc extends AbstractIRDoc {
 	 */
 	private class MyAnalyzer extends Analyzer {
 
-		public static final String IR_ANALYZER_STEM = "ir.analyzer.stem";
-		public static final String IR_ANALYZER_STOPWORDS = "ir.analyzer.stopwords";
-		public static final String IR_ANALYZER_CASE_FOLDING = "ir.analyzer.caseFolding";
-
 		@Override
 		protected TokenStreamComponents createComponents(String fieldName) {
 		    final Tokenizer source = new StandardTokenizer();
@@ -55,17 +51,17 @@ public class LuceneIRDoc extends AbstractIRDoc {
 		    
 		    result = new EnglishPossessiveFilter(result);
 		    
-		    if(!"false".equals(System.getProperty(IR_ANALYZER_CASE_FOLDING)))
+		    if(!"false".equals(System.getProperty(AbstractIRDoc.IR_ANALYZER_CASE_FOLDING)))
 		    	result = new LowerCaseFilter(result);
 		    
 		    
-		    if(!"false".equals(System.getProperty(IR_ANALYZER_STOPWORDS)))
+		    if(!"false".equals(System.getProperty(AbstractIRDoc.IR_ANALYZER_STOPWORDS)))
 		    	result = new StopFilter(result, StopAnalyzer.ENGLISH_STOP_WORDS_SET);
 		    
 //		    if(!stemExclusionSet.isEmpty())
 //		      result = new SetKeywordMarkerFilter(result, stemExclusionSet);
 		    
-		    if(!"false".equals(System.getProperty(IR_ANALYZER_STEM)))
+		    if(!"false".equals(System.getProperty(AbstractIRDoc.IR_ANALYZER_STEM)))
 		    	result = new PorterStemFilter(result);
 		    
 		    return new TokenStreamComponents(source, result);
@@ -75,6 +71,7 @@ public class LuceneIRDoc extends AbstractIRDoc {
 	
 	public void process() {
 		this.counts = new CountingMap();
+		this.bicounts = new CountingMap();
 		//Tokenizer tokenizer = new WhitespaceTokenizer();
 		
 		try (
@@ -88,9 +85,9 @@ public class LuceneIRDoc extends AbstractIRDoc {
 			String last = null;
 			while(stream.incrementToken()) {
 				//String t = stream.reflectAsString(true);
-				//System.out.println(att.toString());
+				//Logg.info(att.toString());
 				String curr = att.toString();
-				//System.out.println(curr);
+				//Logg.info(curr);
 				counts.add(curr);
 				if(last != null) {
 					bicounts.add(last + " " + curr);
