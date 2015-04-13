@@ -168,7 +168,19 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 	}
 
 	@Override
-	public ISearchResult search(AbstractIRDoc doc, String runName) {
+	public ISearchResult search(AbstractIRDoc doc, ScoringMethod sm, String runName) {
+		switch (sm) {
+		case TF:
+			return tf(doc, runName);
+		case TF_IDF:
+			return tf_idf(doc, runName);
+		default:
+			throw new IllegalArgumentException("invalid scoring method " + sm);
+		}
+		
+	}
+
+	private ISearchResult tf(AbstractIRDoc doc, String runName) {
 		String sql = " select top " + "100"
 				+ " count(logtf_p1), sum(logtf_p1) as score, name AS D_NAME from ( "
 				+ " select 1+ log(times) logtf_p1, d.name from {0}POSTING o "
@@ -185,7 +197,7 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 			int i = 1;
 			for(String s : getCounts(doc).keySet()) {
 				pstmt.setString(i++, s);
-			}			
+			}
 			SimpleSearchResult sr = new SimpleSearchResult();
 			int j = 1;
 			try(ResultSet rs = pstmt.executeQuery();) {
@@ -207,18 +219,57 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		} catch (SQLException e) {
 			throw new RuntimeException("data access exception for search", e);
 		}
-		
-//		
-//		SearchResult sr = new SearchResult(doc.getName(), runName);
-//		Logg.info("counts: " + doc.getCounts().size());
-//		for(String s : doc.getCounts().keySet()) {
-//			IndexValue b = get(s);
-//			if(b != null) {
-//				//hit
-//				sr.add(b);
-//			}
-//		}
-//		return sr;
+	}
+	
+	private ISearchResult tf_idf(AbstractIRDoc doc, String runName) {
+		String sql = "select top 100 sum(tf_idf) as score, D_NAME from ( "
+						+ " select D_NAME, (1+ log(times)) * log10((select count(*) from DOCUMENT) /  x.doc_count) AS tf_idf from BAGOFWORDS_POSTING   o "
+						+ "		join document d on o.document_id = d.id "
+						+ "		join BAGOFWORDS_DICTIONARY  p on p.id = o.dictionary_id "
+						+ "		join ( "
+						+ "			select d0.id as p_id, count(p0.document_id) AS doc_count "
+						+ "			from BAGOFWORDS_POSTING  p0 "
+						+ "				join BAGOFWORDS_DICTIONARY d0 on p0.dictionary_id = d0.id "
+						+ "			where d0.value in ( "
+						+ "			  ?, :in) "
+						+ "			group by d0.id "
+						+ "		) x on o.dictionary_id = x.p_id "
+						+ "		where p.value in ( "
+						+ "			?, :in) "
+						+ "	) as x "
+						+ " group by document_id "
+						+ " order by sum(tf_idf) desc ";
+		sql = sql.replace(":in", new String(new char[getCounts(doc).size() -1 ]).replace("\0", ", ?"));
+		try(Connection con = getConnection();
+				PreparedStatement pstmt = con.prepareStatement(sql)) {
+			int i = 1;
+			for(String s : getCounts(doc).keySet()) {
+				pstmt.setString(i++, s);
+			}
+			for(String s : getCounts(doc).keySet()) {
+				pstmt.setString(i++, s);
+			}
+			SimpleSearchResult sr = new SimpleSearchResult();
+			int j = 1;
+			try(ResultSet rs = pstmt.executeQuery();) {
+				while(rs.next()) {
+					
+					String docName = rs.getString("D_NAME");
+					double score = rs.getDouble("score");
+					String line = String.format(ISearchResult.RESULT_FORMAT
+							, doc.getName()
+							, docName
+							, j
+							, score
+							, runName);
+					j++;
+					sr.addLine(line);
+				}
+			}
+			return sr;
+		} catch (SQLException e) {
+			throw new RuntimeException("data access exception for search", e);
+		}
 	}
 	
 //	private class PersistentIndexValue extends IndexValue {

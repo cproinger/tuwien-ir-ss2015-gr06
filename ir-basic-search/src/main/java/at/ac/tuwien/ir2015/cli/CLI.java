@@ -15,8 +15,10 @@ import org.apache.lucene.analysis.Analyzer;
 
 import at.ac.tuwien.ir2015.AbstractIRDoc;
 import at.ac.tuwien.ir2015.App;
+import at.ac.tuwien.ir2015.IndexType;
 import at.ac.tuwien.ir2015.LuceneIRDoc;
 import at.ac.tuwien.ir2015.Persistence;
+import at.ac.tuwien.ir2015.ScoringMethod;
 import at.ac.tuwien.ir2015.StorageType;
 import at.ac.tuwien.ir2015.util.Logg;
 
@@ -25,6 +27,7 @@ public class CLI {
 	private static Options options = new Options();
 	static {		
 		options.addOption("s", "search", true, "perform search with a topic file (zip)");
+		options.addOption("m", "scoringMethod", true, "which scoring method to use, one of {TF = term frequency, TF_IDF = inverse document frequency} are allowed values, default is TF");
 		options.addOption("q", "queryIndex", true, "perform the search on the 'bagOfWords'- or the 'bigram'-index. Default is 'bagOfWords'");
 		options.addOption("?", "help", false, "display the help text");
 		options.addOption("i", "index", true, "index a zip-file containing documents");
@@ -78,7 +81,16 @@ public class CLI {
 						runName = cmd.getOptionValue("n");
 					}
 					String topicFile = cmd.getOptionValue("s");
-					app.search(topicFile, runName);
+					
+					ScoringMethod sm = ScoringMethod.TF;
+					if(cmd.hasOption("m")) {
+						sm = ScoringMethod.valueOf(cmd.getOptionValue("m"));
+					}
+					IndexType it = IndexType.BAGOFWORDS;
+					if(cmd.hasOption("q")) {
+						it = IndexType.valueOf(cmd.getOptionValue("q"));
+					}
+					app.search(topicFile, it, sm, runName);
 				}
 			}
 			

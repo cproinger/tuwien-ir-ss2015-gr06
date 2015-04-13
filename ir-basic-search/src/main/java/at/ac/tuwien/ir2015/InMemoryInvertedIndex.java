@@ -42,7 +42,7 @@ public class InMemoryInvertedIndex implements InvertedIndex {
 	}
 
 	@Override
-	public ISearchResult search(AbstractIRDoc doc, String runName) {
+	public ISearchResult search(AbstractIRDoc doc, ScoringMethod sm, String runName) {
 		SearchResult sr = new SearchResult(doc.getName(), runName);
 		for(String s : it.getCounts(doc).keySet()) {
 			IndexValue b = get(s);

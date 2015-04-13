@@ -68,17 +68,19 @@ public class App implements Closeable {
 		private final ZipFile zip;
 		private final String runName;
 		private IndexType it;
+		private ScoringMethod sm;
 
-		public Searcher(ZipFile zip, String runName, IndexType it) {
+		public Searcher(ZipFile zip, String runName, IndexType it, ScoringMethod sm) {
 			this.zip = zip;
 			this.runName = runName;
 			this.it = it;
+			this.sm = sm;
 		}
 		
 		@Override
 		public void accept(ZipEntry t) {
 			try (InputStream is = zip.getInputStream(t)) {
-				search(new LuceneIRDoc(t.getName(), is), runName, it);
+				search(new LuceneIRDoc(t.getName(), is), it, sm, runName);
 			} catch (IOException e) {
 				throw new RuntimeException("error searching " + t.getName(), e);
 			}
@@ -112,7 +114,7 @@ public class App implements Closeable {
 		
 		LuceneIRDoc doc = new LuceneIRDoc("test", new ReaderInputStream(sr));
 		doc.process();
-		app.search(doc, "test", IndexType.BAGOFWORDS);
+		app.search(doc, IndexType.BAGOFWORDS, ScoringMethod.TF, "test");
 	}
 
 	private final Map<IndexType, InvertedIndex> indices = new HashMap<IndexType, InvertedIndex>();
@@ -183,24 +185,20 @@ public class App implements Closeable {
 
 	}
 
-	public void search(AbstractIRDoc doc, String runName, IndexType it) {
-		ISearchResult sr = indices.get(it).search(doc, runName);
+	public void search(AbstractIRDoc irDoc, IndexType it, ScoringMethod sm, String runName) {
+		ISearchResult sr = indices.get(it).search(irDoc, sm, runName);
 		System.out.print(sr.toString());
 	}
 
-	public void search(String topicFile, String runName, IndexType it) throws ZipException, IOException {
+	public void search(String topicFile, IndexType it, ScoringMethod sm, String runName) throws ZipException, IOException {
 		
 		try (ZipFile zip = new ZipFile(new File(topicFile));) {
-			Searcher searcher = new Searcher(zip, runName, it);
+			Searcher searcher = new Searcher(zip, runName, it, sm);
 			zip.stream()
 				.filter(p -> !p.isDirectory())
 				.sequential()
 				.forEach(searcher);
 		}
-	}
-	
-	public void search(String topicFile, String runName) throws ZipException, IOException {
-		search(topicFile, runName, IndexType.BAGOFWORDS);
 	}
 
 	@Override

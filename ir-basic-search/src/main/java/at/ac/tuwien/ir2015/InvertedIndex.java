@@ -6,6 +6,6 @@ public interface InvertedIndex {
 
 	public abstract IndexValue get(String s);
 
-	public abstract ISearchResult search(AbstractIRDoc doc, String runName);
+	public abstract ISearchResult search(AbstractIRDoc doc, ScoringMethod sm, String runName);
 
 }
