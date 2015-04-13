@@ -49,7 +49,7 @@ public class App implements Closeable {
 						return;
 				}
 				
-				Logg.info("reading: " + name);
+				//Logg.info("reading: " + name);
 				LuceneIRDoc doc = new LuceneIRDoc(name, is);
 				doc.process();
 				try {

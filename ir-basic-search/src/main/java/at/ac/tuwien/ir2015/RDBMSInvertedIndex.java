@@ -76,14 +76,17 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		try(Connection con = getConnection();) {
 			Long docId = null;
 			try (PreparedStatement pstmt = con.prepareStatement(
-					"merge into document(name) KEY(name) values(?)", Statement.RETURN_GENERATED_KEYS)) {
+					"merge into document(name) "
+					+ "KEY(name) "
+					+ "values(?)", Statement.RETURN_GENERATED_KEYS)) {
 				pstmt.setString(1, doc.getName());
 				executeUpdateWithCheck(pstmt);
 				ResultSet rs = pstmt.getGeneratedKeys();
 				if(rs.next()) {
 					docId = rs.getLong(1);
 				}
-			} 
+			}
+			
 //			catch(SQLException e) {
 //				if(e.getErrorCode() == 23505) {
 //					//duplicate
@@ -98,22 +101,24 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 					//+ "	KEY(DICTIONARY_id, document_id) "
 					+ "	values("
 					+ "		(select id from {0}DICTIONARY where value = ?), "
-					+ (docId == 0 ? "		(select id from document where name = ?), " : "?, ")
+					+ (docId == null ? "		(select id from document where name = ?), " : "?, ")
 					+ "?"//+ "		(ifnull((select o.times " + SELECT_DICTIONARY_FOR_DOC + " and d.name = ?), 0) + 1)"
 					+ ")";
+			con.setAutoCommit(false);
 			try(PreparedStatement occurence = con.prepareStatement(
 					insOcc);
-				PreparedStatement DICTIONARY = con.prepareStatement(
+				PreparedStatement dictionary = con.prepareStatement(
 						"merge into {0}DICTIONARY(value) KEY(value) values(?)");
-					) {		
+					) {
+				con.commit();
 				for(Map.Entry<String, Integer> e : getCounts(doc).entrySet()) {	
-					if(!DICTIONARYs.contains(e.getKey())) {
-						DICTIONARY.setString(1, e.getKey());
-						executeUpdateWithCheck(DICTIONARY);
-						DICTIONARYs.add(e.getKey());
+					if(!dictionaries.contains(e.getKey())) {
+						dictionary.setString(1, e.getKey());
+						executeUpdateWithCheck(dictionary);
+						dictionaries.add(e.getKey());
 					}
 					occurence.setString(1, e.getKey());
-					if(docId == 0)
+					if(docId == null)
 						occurence.setString(2, doc.getName());
 					else
 						occurence.setLong(2, docId);
@@ -125,6 +130,8 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 				}
 				occurence.executeBatch();
 			}
+			con.commit();
+			con.setAutoCommit(true);
 		} catch (SQLException e) {
 			throw new RuntimeException("data access exception for add", e);
 		}
@@ -134,7 +141,7 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		return it.getCounts(doc);
 	}
 
-	private HashSet<String> DICTIONARYs = new HashSet<>();
+	private HashSet<String> dictionaries = new HashSet<>();
 	
 	private void executeUpdateWithCheck(PreparedStatement pstmt)
 			throws SQLException {
