@@ -223,21 +223,21 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 	
 	private ISearchResult tf_idf(AbstractIRDoc doc, String runName) {
 		String sql = "select top 100 sum(tf_idf) as score, D_NAME from ( "
-						+ " select D_NAME, (1+ log(times)) * log10((select count(*) from DOCUMENT) /  x.doc_count) AS tf_idf from BAGOFWORDS_POSTING   o "
+						+ " select d.name AS D_NAME, (1+ log(times)) * log10((select count(*) from DOCUMENT) /  x.doc_count) AS tf_idf from {0}POSTING   o "
 						+ "		join document d on o.document_id = d.id "
-						+ "		join BAGOFWORDS_DICTIONARY  p on p.id = o.dictionary_id "
+						+ "		join {0}DICTIONARY  p on p.id = o.dictionary_id "
 						+ "		join ( "
 						+ "			select d0.id as p_id, count(p0.document_id) AS doc_count "
-						+ "			from BAGOFWORDS_POSTING  p0 "
-						+ "				join BAGOFWORDS_DICTIONARY d0 on p0.dictionary_id = d0.id "
+						+ "			from {0}POSTING  p0 "
+						+ "				join {0}DICTIONARY d0 on p0.dictionary_id = d0.id "
 						+ "			where d0.value in ( "
-						+ "			  ?, :in) "
+						+ "			  ? :in) "
 						+ "			group by d0.id "
 						+ "		) x on o.dictionary_id = x.p_id "
 						+ "		where p.value in ( "
-						+ "			?, :in) "
+						+ "			? :in) "
 						+ "	) as x "
-						+ " group by document_id "
+						+ " group by D_NAME "
 						+ " order by sum(tf_idf) desc ";
 		sql = sql.replace(":in", new String(new char[getCounts(doc).size() -1 ]).replace("\0", ", ?"));
 		try(Connection con = getConnection();
