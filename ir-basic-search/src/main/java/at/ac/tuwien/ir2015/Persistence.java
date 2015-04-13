@@ -20,6 +20,7 @@ public class Persistence {
 
 	public static final String IR_DB_FILE = "ir.dbFile";
 	private static volatile BasicDataSource dataSource = null;
+	private static Connection keepDBOpenCon;
 	
 	public static DataSource getDataSource() {
 		if(dataSource == null) {
@@ -28,11 +29,16 @@ public class Persistence {
 					BasicDataSource ds = new BasicDataSource();
 					ds.setUrl(System.getProperty(IR_DB_FILE, "jdbc:h2:file:./target/ir_db;MAX_COMPACT_TIME=10000"));//;CACHE_SIZE=10240"));
 					ds.setUsername("sa");
-					ds.setMinIdle(1);
-					ds.setInitialSize(1);
-					ds.setMaxTotal(1);
+					ds.setMinIdle(2);
+					ds.setInitialSize(2);
+					ds.setMaxTotal(2);
 					ds.setPoolPreparedStatements(true);
 					ds.setDefaultAutoCommit(true);
+					try {
+						keepDBOpenCon = ds.getConnection();
+					} catch (SQLException e) {
+						throw new RuntimeException("cannot get connection");
+					}
 					dataSource = ds;
 				}
 			}
@@ -91,6 +97,7 @@ public class Persistence {
 	public static void close() {
 		if(dataSource != null) {
 			try {
+				keepDBOpenCon.close();
 				dataSource.close();
 			} catch (SQLException e) {
 				throw new RuntimeException("ex while closing datasource", e);

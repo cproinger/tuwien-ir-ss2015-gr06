@@ -42,13 +42,16 @@ public class SearchResult implements ISearchResult  {
 		}
 	};
 	
-	private HashMap<AbstractIRDoc, Result> results = new HashMap<AbstractIRDoc, Result>();
-	private String runName;
-	private String topic;
+	private final HashMap<AbstractIRDoc, Result> results = new HashMap<AbstractIRDoc, Result>();
+	private final String runName;
+	private final String topic;
+
+	private final ScoringMethod scoringMethod;
 	
-	public SearchResult(String topic, String runName) {
+	public SearchResult(String topic, String runName, ScoringMethod sm) {
 		this.topic = topic;
 		this.runName = runName;
+		this.scoringMethod = sm;
 	}
 
 	/* (non-Javadoc)
@@ -74,16 +77,16 @@ public class SearchResult implements ISearchResult  {
 		return String.format(RESULT_FORMAT, topic, r.doc.getName(), i, r.score, runName);
 	}
 
-	public void add(IndexValue iv) {
+	public void add(IndexValue iv, double df) {
 		for(Map.Entry<AbstractIRDoc, Integer> entry : iv.getMapCounts().entrySet()) {
 			Result r = results.get(entry.getKey());
 			if(r == null) {
 				r = new Result();
 				r.doc = entry.getKey();
-				r.score = calcScore(entry); 
+				r.score = calcScore(entry, df); 
 				results.put(entry.getKey(), r);
 			} else {
-				r.score += calcScore(entry);//tf = sum(1 + log(tf));
+				r.score += calcScore(entry, df);//tf = sum(1 + log(tf));
 			}
 		}
 	}
@@ -102,9 +105,12 @@ public class SearchResult implements ISearchResult  {
 //	}
 
 	/**
-	 * entry-score = 1 + log(tf)
+	 * entry-score = 1 + log10(tf)
 	 */
-	private double calcScore(Map.Entry<AbstractIRDoc, Integer> entry) {
-		return 1 + Math.log10(entry.getValue());
+	private double calcScore(Map.Entry<AbstractIRDoc, Integer> entry, double df) {
+		double tf = 1 + Math.log10(entry.getValue());
+		if(scoringMethod == ScoringMethod.TF_IDF)
+			tf = tf * df;
+		return tf;
 	}
 }
