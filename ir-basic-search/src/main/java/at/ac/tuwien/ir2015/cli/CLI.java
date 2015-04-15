@@ -38,13 +38,13 @@ public class CLI {
 				+ " for subsequent search calls");
 		options.addOption("l", "logging", false, "turns on logging for the indexing part");
 		
-		OptionGroup group = new OptionGroup();
+		//OptionGroup group = new OptionGroup();
 		
-		options.addOptionGroup(group);
+		//options.addOptionGroup(group);
 		
-		group.addOption(new Option("e", "disableStemming", false, "if provided disables Stemming (indexing and search need to use the same options)"));
-		group.addOption(new Option("c", "disableCaseFolding", false, "if provided disables case folding (indexing and search need to use the same options)"));
-		group.addOption(new Option("w", "disableStopwords", false, "if provided disables stop words (indexing and search need to use the same options)"));
+		options.addOption(new Option("e", "disableStemming", false, "if provided disables Stemming (indexing and search need to use the same options)"));
+		options.addOption(new Option("c", "disableCaseFolding", false, "if provided disables case folding (indexing and search need to use the same options)"));
+		options.addOption(new Option("w", "disableStopwords", false, "if provided disables stop words (indexing and search need to use the same options)"));
 		
 	}
 	
