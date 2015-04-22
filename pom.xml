@@ -7,6 +7,7 @@
 	<packaging>pom</packaging>
 	<modules>
 		<module>ir-basic-search</module>
+		<module>ir-lucene</module>
 	</modules>
 
 	<build>
