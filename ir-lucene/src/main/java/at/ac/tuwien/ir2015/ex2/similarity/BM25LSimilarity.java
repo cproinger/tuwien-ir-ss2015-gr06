@@ -1,4 +1,4 @@
-package at.ac.tuwien.ir2015.similarity;
+package at.ac.tuwien.ir2015.ex2.similarity;
 
 import java.io.IOException;
 
@@ -59,15 +59,13 @@ public class BM25LSimilarity extends Similarity {
 	 * <code>log(1 + (numDocs - docFreq + 0.5)/(docFreq + 0.5))</code>.
 	 */
 	protected float idf(long docFreq, long numDocs) {
+		//unterscheidet sich von der formel aus 1. motivation durch das
+		//-docFreq+0.5D im Zähler + das +1 wird nicht durch den nenner dividiert. 
 		return (float) Math.log(1 + (numDocs - docFreq + 0.5D)
 				/ (docFreq + 0.5D));
 	}
 
-	/** Implemented as <code>1 / (distance + 1)</code>. */
-	protected float sloppyFreq(int distance) {
-		return 1.0f / (distance + 1);
-	}
-
+	
 	/** The default implementation returns <code>1</code> */
 	protected float scorePayload(int doc, int start, int end, BytesRef payload) {
 		return 1;
@@ -218,6 +216,7 @@ public class BM25LSimilarity extends Similarity {
 	@Override
 	public final SimWeight computeWeight(float queryBoost,
 			CollectionStatistics collectionStats, TermStatistics... termStats) {
+		
 		Explanation idf = termStats.length == 1 ? idfExplain(collectionStats,
 				termStats[0]) : idfExplain(collectionStats, termStats);
 
@@ -226,6 +225,7 @@ public class BM25LSimilarity extends Similarity {
 		// compute freq-independent part of bm25 equation across all norm values
 		float cache[] = new float[256];
 		for (int i = 0; i < cache.length; i++) {
+			//(2)  
 			cache[i] = k1 * ((1 - b) + b * decodeNormValue((byte) i) / avgdl);
 		}
 		return new BM25Stats(collectionStats.field(), idf, queryBoost, avgdl,
@@ -269,7 +269,8 @@ public class BM25LSimilarity extends Similarity {
 
 		@Override
 		public float computeSlopFactor(int distance) {
-			return sloppyFreq(distance);
+			/* Implemented as <code>1 / (distance + 1)</code>. */
+			return 1.0f / (distance + 1);
 		}
 
 		@Override
