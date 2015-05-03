@@ -13,22 +13,26 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.SmallFloat;
 
 /**
- * BM25 Similarity. Introduced in Stephen E. Robertson, Steve Walker, Susan
- * Jones, Micheline Hancock-Beaulieu, and Mike Gatford. Okapi at TREC-3. In
- * Proceedings of the Third <b>T</b>ext <b>RE</b>trieval <b>C</b>onference (TREC
- * 1994). Gaithersburg, USA, November 1994.
+ * BM25L Similarity. sifaka.cs.uiuc.edu/~ylv2/pub/sigir11-bm25l.pdf
  * 
  * @lucene.experimental
  * 
- *                      As of now just a copy of BM25L
+ *                      As of now just a copy of BM25
  */
 public class BM25LSimilarity extends Similarity {
 	private final float k1;
 	private final float b;
+	//NEW
+	private float delta = 0.5f;
 
 	// TODO: should we add a delta like
 	// sifaka.cs.uiuc.edu/~ylv2/pub/sigir11-bm25l.pdf ?
 
+	public BM25LSimilarity(float delta) {
+		this();
+		this.delta = delta;
+	}
+	
 	/**
 	 * BM25 with the supplied parameter values.
 	 * 
@@ -343,6 +347,7 @@ public class BM25LSimilarity extends Similarity {
 		if (norms == null) {
 			tfNormExpl.addDetail(new Explanation(0,
 					"parameter b (norms omitted for field)"));
+			//das ist der rechte teil von (2): (k1+1) * c'(q,D) / k1 + c'(q,D). 
 			tfNormExpl.setValue((freq.getValue() * (k1 + 1))
 					/ (freq.getValue() + k1));
 		} else {
@@ -351,6 +356,7 @@ public class BM25LSimilarity extends Similarity {
 			tfNormExpl
 					.addDetail(new Explanation(stats.avgdl, "avgFieldLength"));
 			tfNormExpl.addDetail(new Explanation(doclen, "fieldLength"));
+			//das ist der linke teil von (2): (k1+1*c(q,D)) / c(q,D)+k1*(1-b+b*doclen/avdl). 
 			tfNormExpl.setValue((freq.getValue() * (k1 + 1))
 					/ (freq.getValue() + k1
 							* (1 - b + b * doclen / stats.avgdl)));

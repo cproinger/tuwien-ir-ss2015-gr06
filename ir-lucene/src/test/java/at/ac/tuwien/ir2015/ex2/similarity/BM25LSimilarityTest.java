@@ -16,8 +16,8 @@ public class BM25LSimilarityTest {
 	@Test
 	public void testIDF() {
 		//um ein gefühl für diese werte zu bekommen.
-		float x = BM25L_SIMILARITY.idf(5, 100);
-		assertEquals(2.9103725f, x, DELTA);
+		assertEquals(2.9103725f, BM25L_SIMILARITY.idf(5, 100), DELTA);
+		assertEquals(5.542681f, BM25L_SIMILARITY.idf(23, 6000), DELTA);
 	}
 	
 	@Test

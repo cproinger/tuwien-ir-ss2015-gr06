@@ -17,13 +17,15 @@ import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.FSDirectory;
 
+import at.ac.tuwien.ir2015.ex2.similarity.BM25LSimilarity;
+
 public class BM25IndexSearcher {
 
 	public void search() throws IOException, ParseException {
 		IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths
 				.get("target/index")));
 		IndexSearcher searcher = new IndexSearcher(reader);
-		searcher.setSimilarity(new BM25Similarity());
+		searcher.setSimilarity(new BM25LSimilarity());
 		Analyzer analyzer = new StandardAnalyzer();
 		
 		QueryParser parser = new QueryParser("contents", analyzer);
