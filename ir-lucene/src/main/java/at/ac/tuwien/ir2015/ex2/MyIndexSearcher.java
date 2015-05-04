@@ -19,7 +19,7 @@ import org.apache.lucene.store.FSDirectory;
 
 import at.ac.tuwien.ir2015.ex2.similarity.BM25LSimilarity;
 
-public class BM25IndexSearcher {
+public class MyIndexSearcher {
 
 	public void search() throws IOException, ParseException {
 		IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths

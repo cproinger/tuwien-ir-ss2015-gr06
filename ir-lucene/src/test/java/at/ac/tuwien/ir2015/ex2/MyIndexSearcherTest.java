@@ -6,10 +6,10 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import org.junit.Test;
 
 
-public class BM25IndexSearcherTest {
+public class MyIndexSearcherTest {
 
 	@Test
 	public void test() throws IOException, ParseException {
-		new BM25IndexSearcher().search();
+		new MyIndexSearcher().search();
 	}
 }

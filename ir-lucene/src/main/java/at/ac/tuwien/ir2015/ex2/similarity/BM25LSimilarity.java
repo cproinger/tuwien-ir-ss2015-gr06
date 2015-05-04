@@ -253,6 +253,7 @@ public class BM25LSimilarity extends Similarity {
 		BM25DocScorer(BM25Stats stats, NumericDocValues norms)
 				throws IOException {
 			this.stats = stats;
+			//zähler von (2)?
 			this.weightValue = stats.weight * (k1 + 1);
 			this.cache = stats.cache;
 			this.norms = norms;
