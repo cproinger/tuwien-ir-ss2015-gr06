@@ -27,6 +27,7 @@ public class BM25LSimilarity extends Similarity {
 
 	// TODO: should we add a delta like
 	// sifaka.cs.uiuc.edu/~ylv2/pub/sigir11-bm25l.pdf ?
+	// KS: example states that delta should be a command line param, thus should be passed through
 
 	public BM25LSimilarity(float delta) {
 		this();
