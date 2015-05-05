@@ -1,0 +1,1 @@
+trec_eval -q -m map -c qrels.txt ../src/test/resources/sample-result.txt

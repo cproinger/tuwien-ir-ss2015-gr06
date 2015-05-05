@@ -1,0 +1,1 @@
+um trec_eval ausführen zu können muss cygwin/bin im PATH sein. (https://www.cygwin.com/)

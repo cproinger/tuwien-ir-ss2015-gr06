@@ -1,0 +1,6 @@
+topic1 Q0 misc.forsale/76442 1 2.813525 group5-experiment1
+topic1 Q0 misc.forsale/76056 2 1.0114759 group5-experiment1
+topic1 Q0 rec.autos/102958 3 0.58848727 group5-experiment1
+topic2 Q0 misc.forsale/76442 1 2.813525 group5-experiment1
+topic2 Q0 misc.forsale/74787 2 1.0114759 group5-experiment1
+topic2 Q0 rec.autos/102958 3 0.58848727 group5-experiment1
