@@ -18,6 +18,11 @@ import org.apache.lucene.util.SmallFloat;
  * @lucene.experimental
  * 
  *                      As of now just a copy of BM25
+ *                      Modifications:
+ *                      	explainScore
+ *                      		adjusted value returned in tfNormExpl, which is provided as a detail of 
+ *                      		the result explanation type, takes delta into account (also provides 
+ *                      		information on delta in details)
  */
 public class BM25LSimilarity extends Similarity {
 	private final float k1;
@@ -263,6 +268,7 @@ public class BM25LSimilarity extends Similarity {
 		@Override
 		public float score(int doc, float freq) {
 			// if there are no norms, we act as if b=0
+			// KS: here we still have to adjust something!!!
 			float norm = norms == null ? k1
 					: cache[(byte) norms.get(doc) & 0xFF];
 			return weightValue * freq / (freq + norm);
@@ -301,6 +307,8 @@ public class BM25LSimilarity extends Similarity {
 		/** field name, for pulling norms */
 		private final String field;
 		/** precomputed norm[256] with k1 * ((1 - b) + b * dl / avgdl) */
+		// KS: this is what we need to adjust the document weights!!!
+		// KS: the term ((1 - b) + b * dl / avgdl) is the bottom half of c'
 		private final float cache[];
 
 		BM25Stats(String field, Explanation idf, float queryBoost, float avgdl,
@@ -329,16 +337,13 @@ public class BM25LSimilarity extends Similarity {
 		}
 	}
 
-	private Explanation explainScore(int doc, Explanation freq,
-			BM25Stats stats, NumericDocValues norms) {
-		Explanation result = new Explanation();
-		result.setDescription("score(doc=" + doc + ",freq=" + freq
-				+ "), product of:");
+	private Explanation explainScore(int doc, Explanation freq, BM25Stats stats, NumericDocValues norms) {
 
-		Explanation boostExpl = new Explanation(stats.queryBoost
-				* stats.topLevelBoost, "boost");
-		if (boostExpl.getValue() != 1.0f)
-			result.addDetail(boostExpl);
+		Explanation result = new Explanation();
+		result.setDescription("score(doc=" + doc + ",freq=" + freq + "), product of:");
+
+		Explanation boostExpl = new Explanation(stats.queryBoost * stats.topLevelBoost, "boost");
+		if (boostExpl.getValue() != 1.0f) result.addDetail(boostExpl);
 
 		result.addDetail(stats.idf);
 
@@ -347,21 +352,40 @@ public class BM25LSimilarity extends Similarity {
 		tfNormExpl.addDetail(freq);
 		tfNormExpl.addDetail(new Explanation(k1, "parameter k1"));
 		if (norms == null) {
-			tfNormExpl.addDetail(new Explanation(0,
-					"parameter b (norms omitted for field)"));
+			tfNormExpl.addDetail(new Explanation(0, "parameter b (norms omitted for field)"));
+			// KS: if be is omitted, then the rest of the document lenght algorithms don't run
+			// thus irrelevant
 			//das ist der rechte teil von (2): (k1+1) * c'(q,D) / k1 + c'(q,D). 
-			tfNormExpl.setValue((freq.getValue() * (k1 + 1))
-					/ (freq.getValue() + k1));
+			tfNormExpl.setValue((freq.getValue() * (k1 + 1)) / (freq.getValue() + k1));
 		} else {
 			float doclen = decodeNormValue((byte) norms.get(doc));
+			float normTF2;
+			float normTFDelta;
+			float avgdl = stats.avgdl;
 			tfNormExpl.addDetail(new Explanation(b, "parameter b"));
-			tfNormExpl
-					.addDetail(new Explanation(stats.avgdl, "avgFieldLength"));
+			tfNormExpl.addDetail(new Explanation(stats.avgdl, "avgFieldLength"));
 			tfNormExpl.addDetail(new Explanation(doclen, "fieldLength"));
+			tfNormExpl.addDetail(new Explanation(delta, "delta"));
+			// KS!!!
+			// F(q,D)= 
+			// but including b, so middle formula using c
 			//das ist der linke teil von (2): (k1+1*c(q,D)) / c(q,D)+k1*(1-b+b*doclen/avdl). 
-			tfNormExpl.setValue((freq.getValue() * (k1 + 1))
-					/ (freq.getValue() + k1
-							* (1 - b + b * doclen / stats.avgdl)));
+			// check if c' > 0
+			// c(q, D) = freq.getValue()
+			// c'(q,D) = freq.getValue()/(1 - b + b*doclen/avdl)
+			// f'(q, D) = ((k1 + 1)*abs(c' + delta)) / (k1 + abs(c' + delta)) 
+			// f'(q, D) = ((k1 + 1)*normTF2) / (k1 + normTF2) 
+			// 
+			// normTF2 = c'(q,D) 
+			normTF2 = freq.getValue()/(1 - b + b*doclen/avgdl);
+			if (normTF2 <=0) {
+				tfNormExpl.setValue(0);
+			} else {
+				normTFDelta = Math.abs(normTF2 + delta);
+				tfNormExpl.setValue(((k1 + 1)*normTF2) / (k1 + normTF2));
+				
+			}
+			//tfNormExpl.setValue((freq.getValue() * (k1 + 1)) / (freq.getValue() + k1 * (1 - b + b * doclen / stats.avgdl)));
 		}
 		result.addDetail(tfNormExpl);
 		result.setValue(boostExpl.getValue() * stats.idf.getValue()
@@ -371,7 +395,7 @@ public class BM25LSimilarity extends Similarity {
 
 	@Override
 	public String toString() {
-		return "BM25L(k1=" + k1 + ",b=" + b + ")";
+		return "BM25L(k1=" + k1 + ", b=" + b + ", delta=" + delta + ")";
 	}
 
 	/**
@@ -390,5 +414,14 @@ public class BM25LSimilarity extends Similarity {
 	 */
 	public float getB() {
 		return b;
+	}
+
+	/**
+	 * Returns the <code>delta</code> parameter
+	 * 
+	 * @see #BM25Similarity(float, float)
+	 */
+	public float getDelta() {
+		return delta;
 	}
 }
