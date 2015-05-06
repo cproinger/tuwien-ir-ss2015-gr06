@@ -71,6 +71,15 @@ public class BM25LSimilarity extends Similarity {
 	protected float idf(long docFreq, long numDocs) {
 		//unterscheidet sich von der formel aus 1. motivation durch das
 		//-docFreq+0.5D im Zähler + das +1 wird nicht durch den nenner dividiert. 
+		/*
+		 * KS
+		 * Numerically identical to version in paper:
+		 * log((N + 1) / (df(q) + 0.5))
+		 * 
+		 * Trick: add and subtract 1 to the term in the log, but, the one you subtract, you formulate as:
+		 * 		(df(q) + 0.5) / (df(q) + 0.5)
+		 * 		been a while since the basics! ;)
+		 */
 		return (float) Math.log(1 + (numDocs - docFreq + 0.5D)
 				/ (docFreq + 0.5D));
 	}
@@ -238,25 +247,25 @@ public class BM25LSimilarity extends Similarity {
 			//(2)  
 			cache[i] = k1 * ((1 - b) + b * decodeNormValue((byte) i) / avgdl);
 		}
-		return new BM25Stats(collectionStats.field(), idf, queryBoost, avgdl,
+		return new BM25LStats(collectionStats.field(), idf, queryBoost, avgdl,
 				cache);
 	}
 
 	@Override
 	public final SimScorer simScorer(SimWeight stats, LeafReaderContext context)
 			throws IOException {
-		BM25Stats bm25stats = (BM25Stats) stats;
-		return new BM25DocScorer(bm25stats, context.reader().getNormValues(
-				bm25stats.field));
+		BM25LStats bm25lstats = (BM25LStats) stats;
+		return new BM25LDocScorer(bm25lstats, context.reader().getNormValues(
+				bm25lstats.field));
 	}
 
-	private class BM25DocScorer extends SimScorer {
-		private final BM25Stats stats;
+	private class BM25LDocScorer extends SimScorer {
+		private final BM25LStats stats;
 		private final float weightValue; // boost * idf * (k1 + 1)
 		private final NumericDocValues norms;
 		private final float[] cache;
 
-		BM25DocScorer(BM25Stats stats, NumericDocValues norms)
+		BM25LDocScorer(BM25LStats stats, NumericDocValues norms)
 				throws IOException {
 			this.stats = stats;
 			//zähler von (2)?
@@ -269,9 +278,27 @@ public class BM25LSimilarity extends Similarity {
 		public float score(int doc, float freq) {
 			// if there are no norms, we act as if b=0
 			// KS: here we still have to adjust something!!!
-			float norm = norms == null ? k1
+			
+			
+			float norm;
+			float returnVal;
+			
+			if (norms == null) {
+				norm = k1;
+			} else {
+				norm = cache[(byte) norms.get(doc) & 0xFF];
+			}
+			returnVal = weightValue * freq / (freq + norm);
+			return returnVal;
+			
+			
+			
+/*
+ * expanded for debuging
+ * 			float norm = norms == null ? k1
 					: cache[(byte) norms.get(doc) & 0xFF];
 			return weightValue * freq / (freq + norm);
+			*/
 		}
 
 		@Override
@@ -293,7 +320,7 @@ public class BM25LSimilarity extends Similarity {
 	}
 
 	/** Collection statistics for the BM25 model. */
-	private static class BM25Stats extends SimWeight {
+	private static class BM25LStats extends SimWeight {
 		/** BM25's idf */
 		private final Explanation idf;
 		/** The average document length. */
@@ -311,7 +338,7 @@ public class BM25LSimilarity extends Similarity {
 		// KS: the term ((1 - b) + b * dl / avgdl) is the bottom half of c'
 		private final float cache[];
 
-		BM25Stats(String field, Explanation idf, float queryBoost, float avgdl,
+		BM25LStats(String field, Explanation idf, float queryBoost, float avgdl,
 				float cache[]) {
 			this.field = field;
 			this.idf = idf;
@@ -337,10 +364,10 @@ public class BM25LSimilarity extends Similarity {
 		}
 	}
 
-	private Explanation explainScore(int doc, Explanation freq, BM25Stats stats, NumericDocValues norms) {
+	private Explanation explainScore(int doc, Explanation freq, BM25LStats stats, NumericDocValues norms) {
 
 		Explanation result = new Explanation();
-		result.setDescription("score(doc=" + doc + ",freq=" + freq + "), product of:");
+		result.setDescription("score(doc=" + doc + ", freq=" + freq + "), product of:");
 
 		Explanation boostExpl = new Explanation(stats.queryBoost * stats.topLevelBoost, "boost");
 		if (boostExpl.getValue() != 1.0f) result.addDetail(boostExpl);
@@ -382,14 +409,13 @@ public class BM25LSimilarity extends Similarity {
 				tfNormExpl.setValue(0);
 			} else {
 				normTFDelta = Math.abs(normTF2 + delta);
-				tfNormExpl.setValue(((k1 + 1)*normTF2) / (k1 + normTF2));
+				tfNormExpl.setValue(((k1 + 1)*normTFDelta) / (k1 + normTFDelta));
 				
 			}
 			//tfNormExpl.setValue((freq.getValue() * (k1 + 1)) / (freq.getValue() + k1 * (1 - b + b * doclen / stats.avgdl)));
 		}
 		result.addDetail(tfNormExpl);
-		result.setValue(boostExpl.getValue() * stats.idf.getValue()
-				* tfNormExpl.getValue());
+		result.setValue(boostExpl.getValue() * stats.idf.getValue() * tfNormExpl.getValue());
 		return result;
 	}
 

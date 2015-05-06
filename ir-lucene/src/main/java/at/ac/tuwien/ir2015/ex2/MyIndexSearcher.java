@@ -25,7 +25,7 @@ public class MyIndexSearcher {
 		IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths
 				.get("target/index")));
 		IndexSearcher searcher = new IndexSearcher(reader);
-		searcher.setSimilarity(new BM25LSimilarity());
+		searcher.setSimilarity(new BM25Similarity());
 		Analyzer analyzer = new StandardAnalyzer();
 		
 		QueryParser parser = new QueryParser("contents", analyzer);
