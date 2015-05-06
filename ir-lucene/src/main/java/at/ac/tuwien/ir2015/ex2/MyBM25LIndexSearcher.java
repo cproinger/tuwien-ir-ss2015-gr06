@@ -29,7 +29,8 @@ public class MyBM25LIndexSearcher {
 		Analyzer analyzer = new StandardAnalyzer();
 		
 		QueryParser parser = new QueryParser("contents", analyzer);
-		Query query = parser.parse("search for atheism");
+//		Query query = parser.parse("search for atheism");
+		Query query = parser.parse("jail cat fish");
 		TopFieldDocs result = searcher.search(query, 10, Sort.RELEVANCE);
 		for(ScoreDoc d : result.scoreDocs) {
 			System.out.println(d);

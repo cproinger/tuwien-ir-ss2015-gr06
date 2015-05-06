@@ -20,19 +20,36 @@ import org.apache.lucene.store.FSDirectory;
 import at.ac.tuwien.ir2015.ex2.similarity.BM25LSimilarity;
 
 public class MyIndexSearcher {
+	String indexPath;
+	String queryText;
+	public enum SearchType {BM25, BM25L};
+	SearchType searchType;
+	
+	public MyIndexSearcher(String indexPath, String queryText, SearchType searchType) {
+		this.indexPath = indexPath;
+		this.queryText = queryText;
+		this.searchType = searchType;
+		
+	}
 
 	public void search() throws IOException, ParseException {
 		IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths
-				.get("target/index")));
+				.get(indexPath)));
 		IndexSearcher searcher = new IndexSearcher(reader);
-		searcher.setSimilarity(new BM25Similarity());
+		if (searchType == SearchType.BM25) {
+			searcher.setSimilarity(new BM25Similarity());
+		} else {
+			searcher.setSimilarity(new BM25LSimilarity());
+		}
 		Analyzer analyzer = new StandardAnalyzer();
 		
 		QueryParser parser = new QueryParser("contents", analyzer);
-		Query query = parser.parse("search for atheism");
+		Query query = parser.parse(queryText);
+//		Query query = parser.parse("search for atheism");
 		TopFieldDocs result = searcher.search(query, 10, Sort.RELEVANCE);
 		for(ScoreDoc d : result.scoreDocs) {
 			System.out.println(d);
+			System.out.println(d.score);
 			System.out.println(searcher.explain(query, d.doc));
 		}
 	}
