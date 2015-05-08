@@ -15,10 +15,10 @@ public class MyIndexSearcherTest {
 		System.out.println("Before Normal Search");
 		System.out.println("____________________________________________________________________________");
 		// queries "jail cat fish" "search for atheism"
-		new MyIndexSearcher("target/index", "jail cat fish", SearchType.BM25).search();
+		new MyIndexSearcher("target/index", SearchType.BM25).search("jail cat fish");
 		System.out.println("Before BM25L Search");
 		System.out.println("____________________________________________________________________________");
-		new MyIndexSearcher("target/index", "jail cat fish", SearchType.BM25L).search();
+		new MyIndexSearcher("target/index", SearchType.BM25L).search("jail cat fish");
 	}
 }
 
