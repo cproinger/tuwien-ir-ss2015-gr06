@@ -12,9 +12,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.FSDirectory;
 
@@ -25,33 +23,51 @@ public class MyIndexSearcher {
 	
 	private SearchType searchType;
 	private IndexReader reader;
-	private TrecFormatter formatter;
 	private IndexSearcher searcher;
+	private Analyzer analyzer;
+	private QueryParser parser;
 	
 	public MyIndexSearcher(String indexPath, SearchType searchType) throws IOException {
 		this.searchType = searchType;
 		
 		reader = DirectoryReader.open(FSDirectory.open(Paths
 				.get(indexPath)));
-		formatter = new TrecFormatter(reader, System.out);
+		
 		searcher = new IndexSearcher(reader);
 		if (searchType == SearchType.BM25) {
 			searcher.setSimilarity(new BM25Similarity());
 		} else {
 			searcher.setSimilarity(new BM25LSimilarity(1.2F, 0.75F, 0.5F));
 		}
+		analyzer = new StandardAnalyzer();
+		parser = new QueryParser("contents", analyzer);
 	}
 
+	/**
+	 * für ad-hoc suchen (suche ohne konkretes query-dokument) wird explain auch ausgegeben. 
+	 */
 	public void search(String queryText) throws ParseException, IOException {
-		Analyzer analyzer = new StandardAnalyzer();
-		
-		QueryParser parser = new QueryParser("contents", analyzer);
-		Query query = parser.parse(queryText);
+		final Query query = parser.parse(queryText);
+		doSearchAndFormat("ad-hoc-query", "experiment-name1", query, new TrecFormatter(reader, System.out) {
+			@Override
+			public void format(String queryName, TopDocs result,
+					String experimentName) throws IOException {
+				super.format(queryName, result, experimentName);
+				for(ScoreDoc d : result.scoreDocs) {
+					System.out.println(searcher.explain(query, d.doc));
+				}
+			}
+		});
+	}
+	
+	public void search(String queryName, String experimentName, String queryText) throws ParseException, IOException {		
+		doSearchAndFormat(queryName, experimentName, parser.parse(queryText),
+				new TrecFormatter(reader, System.out));
+	}
 
+	private void doSearchAndFormat(String queryName, String experimentName,
+			Query query, TrecFormatter form) throws ParseException, IOException {
 		TopDocs result = searcher.search(query, 10);
-		for(ScoreDoc d : result.scoreDocs) {
-			System.out.println(searcher.explain(query, d.doc));
-		}
-		formatter.format("adhoc-query", result, "experiment-name1");
+		form.format(queryName, result, experimentName);
 	}
 }
