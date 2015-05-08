@@ -1,6 +1,8 @@
 package at.ac.tuwien.ir2015.ex2;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Paths;
 
 import org.apache.lucene.analysis.Analyzer;
@@ -19,6 +21,7 @@ import org.apache.lucene.store.FSDirectory;
 import at.ac.tuwien.ir2015.ex2.similarity.BM25LSimilarity;
 
 public class MyIndexSearcher {
+
 	public enum SearchType {BM25, BM25L};
 	
 	private SearchType searchType;
@@ -26,13 +29,11 @@ public class MyIndexSearcher {
 	private IndexSearcher searcher;
 	private Analyzer analyzer;
 	private QueryParser parser;
+	private PrintStream printStream = System.out;
 	
-	public MyIndexSearcher(String indexPath, SearchType searchType) throws IOException {
+	public MyIndexSearcher(IndexReader ir, SearchType searchType) throws IOException {
 		this.searchType = searchType;
-		
-		reader = DirectoryReader.open(FSDirectory.open(Paths
-				.get(indexPath)));
-		
+		reader = ir;
 		searcher = new IndexSearcher(reader);
 		if (searchType == SearchType.BM25) {
 			searcher.setSimilarity(new BM25Similarity());
@@ -42,19 +43,24 @@ public class MyIndexSearcher {
 		analyzer = new StandardAnalyzer();
 		parser = new QueryParser("contents", analyzer);
 	}
+	
+	public MyIndexSearcher(IndexReader ir, SearchType searchType, PrintStream printStream) throws IOException {
+		this(ir, searchType);
+		this.printStream = printStream;
+	}
 
 	/**
 	 * für ad-hoc suchen (suche ohne konkretes query-dokument) wird explain auch ausgegeben. 
 	 */
 	public void search(String queryText) throws ParseException, IOException {
 		final Query query = parser.parse(queryText);
-		doSearchAndFormat("ad-hoc-query", "experiment-name1", query, new TrecFormatter(reader, System.out) {
+		doSearchAndFormat("ad-hoc-query", "experiment-name1", query, new TrecFormatter(reader, printStream) {
 			@Override
 			public void format(String queryName, TopDocs result,
 					String experimentName) throws IOException {
 				super.format(queryName, result, experimentName);
 				for(ScoreDoc d : result.scoreDocs) {
-					System.out.println(searcher.explain(query, d.doc));
+					printStream.println(searcher.explain(query, d.doc));
 				}
 			}
 		});
@@ -62,7 +68,7 @@ public class MyIndexSearcher {
 	
 	public void search(String queryName, String experimentName, String queryText) throws ParseException, IOException {		
 		doSearchAndFormat(queryName, experimentName, parser.parse(queryText),
-				new TrecFormatter(reader, System.out));
+				new TrecFormatter(reader, printStream));
 	}
 
 	private void doSearchAndFormat(String queryName, String experimentName,
