@@ -50,6 +50,7 @@ public class MyIndexSearcher {
 		for(ScoreDoc d : result.scoreDocs) {
 			System.out.println(d);
 			System.out.println(d.score);
+
 			System.out.println(searcher.explain(query, d.doc));
 		}
 	}

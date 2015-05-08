@@ -35,7 +35,8 @@ public class BM25LSimilarity extends Similarity {
 	// KS: example states that delta should be a command line param, thus should be passed through
 
 	public BM25LSimilarity(float delta) {
-		this();
+		this.k1 = 1.2f;
+		this.b = 0.75f;
 		this.delta = delta;
 	}
 	
@@ -47,9 +48,24 @@ public class BM25LSimilarity extends Similarity {
 	 * @param b
 	 *            Controls to what degree document length normalizes tf values.
 	 */
+	public BM25LSimilarity(float k1, float b, float delta) {
+		this.k1 = k1;
+		this.b = b;
+		this.delta = delta;
+	}
+
+	/**
+	 * BM25 with the supplied parameter values.
+	 * 
+	 * @param k1
+	 *            Controls non-linear term frequency normalization (saturation).
+	 * @param b
+	 *            Controls to what degree document length normalizes tf values.
+	 */
 	public BM25LSimilarity(float k1, float b) {
 		this.k1 = k1;
 		this.b = b;
+		this.delta = 0.5f;
 	}
 
 	/**
@@ -62,6 +78,7 @@ public class BM25LSimilarity extends Similarity {
 	public BM25LSimilarity() {
 		this.k1 = 1.2f;
 		this.b = 0.75f;
+		this.delta = 0.5f;
 	}
 
 	/**
@@ -245,7 +262,9 @@ public class BM25LSimilarity extends Similarity {
 		float cache[] = new float[256];
 		for (int i = 0; i < cache.length; i++) {
 			//(2)  
-			cache[i] = k1 * ((1 - b) + b * decodeNormValue((byte) i) / avgdl);
+			// KS: removing k1 here in order to readjust the formula with delta
+//			cache[i] = k1 * ((1 - b) + b * decodeNormValue((byte) i) / avgdl);
+			cache[i] = ((1 - b) + b * decodeNormValue((byte) i) / avgdl);
 		}
 		return new BM25LStats(collectionStats.field(), idf, queryBoost, avgdl,
 				cache);
@@ -264,6 +283,7 @@ public class BM25LSimilarity extends Similarity {
 		private final float weightValue; // boost * idf * (k1 + 1)
 		private final NumericDocValues norms;
 		private final float[] cache;
+		private float returnVal;
 
 		BM25LDocScorer(BM25LStats stats, NumericDocValues norms)
 				throws IOException {
@@ -281,14 +301,25 @@ public class BM25LSimilarity extends Similarity {
 			
 			
 			float norm;
-			float returnVal;
+			float c2;
+			float f2;
+			
 			
 			if (norms == null) {
 				norm = k1;
+				f2 = freq / (freq + norm);
 			} else {
 				norm = cache[(byte) norms.get(doc) & 0xFF];
+				c2 = freq / norm;
+				if (c2 > 0) {
+					f2 = ((k1 + 1) * (c2 + delta)) / (k1 + c2 + delta);
+				} else {
+					f2 = 0;
+				}
 			}
-			returnVal = weightValue * freq / (freq + norm);
+//			returnVal = weightValue * freq / (freq + norm);
+// KS: newly recalculated score		
+			returnVal = weightValue * f2;
 			return returnVal;
 			
 			
