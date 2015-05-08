@@ -13,6 +13,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.FSDirectory;
@@ -24,17 +25,20 @@ public class MyIndexSearcher {
 	String queryText;
 	public enum SearchType {BM25, BM25L};
 	SearchType searchType;
+	private IndexReader reader;
+	private TrecFormatter formatter;
 	
-	public MyIndexSearcher(String indexPath, String queryText, SearchType searchType) {
+	public MyIndexSearcher(String indexPath, String queryText, SearchType searchType) throws IOException {
 		this.indexPath = indexPath;
 		this.queryText = queryText;
 		this.searchType = searchType;
 		
+		reader = DirectoryReader.open(FSDirectory.open(Paths
+				.get(indexPath)));
+		formatter = new TrecFormatter(reader, System.out);
 	}
 
-	public void search() throws IOException, ParseException {
-		IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths
-				.get(indexPath)));
+	public void search() throws ParseException, IOException {
 		IndexSearcher searcher = new IndexSearcher(reader);
 		if (searchType == SearchType.BM25) {
 			searcher.setSimilarity(new BM25Similarity());
@@ -46,12 +50,11 @@ public class MyIndexSearcher {
 		QueryParser parser = new QueryParser("contents", analyzer);
 		Query query = parser.parse(queryText);
 //		Query query = parser.parse("search for atheism");
-		TopFieldDocs result = searcher.search(query, 10, Sort.RELEVANCE);
+		
+		TopDocs result = searcher.search(query, 10);
 		for(ScoreDoc d : result.scoreDocs) {
-			System.out.println(d);
-			System.out.println(d.score);
-
 			System.out.println(searcher.explain(query, d.doc));
 		}
+		formatter.format("adhoc-query", result, "experiment-name1");
 	}
 }
