@@ -39,7 +39,7 @@ public class MyIndexSearcher {
 		if (searchType == SearchType.BM25) {
 			searcher.setSimilarity(new BM25Similarity());
 		} else {
-			searcher.setSimilarity(new BM25LSimilarity());
+			searcher.setSimilarity(new BM25LSimilarity(1.2F, 0.75F, 0.5F));
 		}
 		Analyzer analyzer = new StandardAnalyzer();
 		
