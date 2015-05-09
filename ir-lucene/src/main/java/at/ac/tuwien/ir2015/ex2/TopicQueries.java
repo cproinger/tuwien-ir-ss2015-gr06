@@ -9,7 +9,6 @@ import java.nio.file.Paths;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -31,32 +30,13 @@ public class TopicQueries {
 					MyIndexSearcher searcher = new MyIndexSearcher(reader, st, printStream);
 					
 					for(File f : new File("topics").listFiles()) {					
-						try(Analyzer a = new EnglishAnalyzer();
-								TokenStream ts = a.tokenStream("contents", new FileReader(f));) {
-							
-							String searchString = toString(ts);
-							searcher.search(f.getName(), "exp-" + st, searchString);
-						}
+						searcher.search(f, "exp-" + st);
 					}
 				}
 			}
 			
 			
 		}
-	}
-	
-	private static String toString(TokenStream stream) throws IOException {
-		CharTermAttribute att = stream.addAttribute(CharTermAttribute.class);
-		
-		stream.reset();
-		StringBuilder sb = new StringBuilder();
-		while(stream.incrementToken()) {
-			String curr = att.toString();
-			sb.append(curr).append(" ");
-			//System.out.print(".");
-		}
-		stream.end();
-		return sb.toString();
 	}
 
 }
