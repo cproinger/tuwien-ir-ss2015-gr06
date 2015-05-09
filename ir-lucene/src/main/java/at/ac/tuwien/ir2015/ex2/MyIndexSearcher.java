@@ -71,9 +71,9 @@ public class MyIndexSearcher {
 			public void format(String queryName, TopDocs result,
 					String experimentName) throws IOException {
 				super.format(queryName, result, experimentName);
-				for(ScoreDoc d : result.scoreDocs) {
-					printStream.println(searcher.explain(query, d.doc));
-				}
+//				for(ScoreDoc d : result.scoreDocs) {
+//					printStream.println(searcher.explain(query, d.doc));
+//				}
 			}
 		});
 	}
