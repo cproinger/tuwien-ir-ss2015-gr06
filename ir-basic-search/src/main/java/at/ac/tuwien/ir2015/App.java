@@ -15,6 +15,8 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.ReaderInputStream;
 
 import at.ac.tuwien.ir2015.util.Logg;
@@ -188,6 +190,12 @@ public class App implements Closeable {
 	public void search(AbstractIRDoc irDoc, IndexType it, ScoringMethod sm, String runName) {
 		ISearchResult sr = indices.get(it).search(irDoc, sm, runName);
 		System.out.print(sr.toString());
+		try {
+			FileUtils.writeStringToFile(new File("target/myIndexTrec.txt"), sr.toString(), true);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void search(String topicFile, IndexType it, ScoringMethod sm, String runName) throws ZipException, IOException {

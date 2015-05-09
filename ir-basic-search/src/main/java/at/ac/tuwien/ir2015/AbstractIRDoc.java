@@ -28,6 +28,10 @@ public abstract class AbstractIRDoc {
 	public String getName() {
 		return name;
 	}
+	
+	public String getSimpleName() {
+		return name.substring(name.lastIndexOf("/") + 1);
+	}
 
 	public Map<String, Integer> getCounts() {
 		return this.counts;

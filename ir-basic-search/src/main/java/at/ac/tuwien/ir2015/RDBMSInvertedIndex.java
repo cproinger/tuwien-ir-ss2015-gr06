@@ -264,8 +264,8 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 					String docName = rs.getString("D_NAME");
 					double score = rs.getDouble("score");
 					String line = String.format(ISearchResult.RESULT_FORMAT
-							, doc.getName()
-							, docName
+							, doc.getSimpleName()
+							, getSimpleName(docName)
 							, j
 							, score
 							, runName);
@@ -277,6 +277,10 @@ public class RDBMSInvertedIndex implements InvertedIndex {
 		} catch (SQLException e) {
 			throw new RuntimeException("data access exception for search", e);
 		}
+	}
+
+	private String getSimpleName(String docName) {
+		return docName.substring(docName.indexOf("/") + 1);
 	}
 	
 //	private class PersistentIndexValue extends IndexValue {
