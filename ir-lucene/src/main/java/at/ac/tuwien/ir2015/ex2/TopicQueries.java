@@ -1,14 +1,12 @@
 package at.ac.tuwien.ir2015.ex2;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.LinkedList;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -23,20 +21,26 @@ public class TopicQueries {
 		try (IndexReader reader = DirectoryReader.open(FSDirectory.open(Paths
 				.get("target/index")));) {
 			
-			for(SearchType st : SearchType.values()) {
+			LinkedList<SearchType> values = new LinkedList<SearchType>(Arrays.asList(SearchType.values()));
+			values.addFirst(null);
+			for(SearchType st : values) {
 				
 				
-				try(PrintStream printStream = new PrintStream("target/" + st + "-trec.txt")) { 
+				try(PrintStream printStream = new PrintStream("target/" + searchTypeToString(st) + "-trec.txt")) { 
 					MyIndexSearcher searcher = new MyIndexSearcher(reader, st, printStream);
 					
 					for(File f : new File("topics").listFiles()) {					
-						searcher.search(f, "exp-" + st);
+						searcher.search(f, "group6-experiment-" + searchTypeToString(st));
 					}
 				}
 			}
 			
 			
 		}
+	}
+
+	private static String searchTypeToString(SearchType st) {
+		return st == null ? "LuceneDefault" : st.toString();
 	}
 
 }

@@ -28,6 +28,7 @@ import at.ac.tuwien.ir2015.ex2.similarity.BM25LSimilarity;
 
 public class MyIndexSearcher {
 
+	private static final int MAX_HITS = 100;
 	/**
 	 * org.apache.lucene.demo.IndexFiles.main(String[])
 	 * indexes content in this field. 
@@ -47,10 +48,13 @@ public class MyIndexSearcher {
 		this.searchType = searchType;
 		reader = ir;
 		searcher = new IndexSearcher(reader);
+		
 		if (searchType == SearchType.BM25) {
 			searcher.setSimilarity(new BM25Similarity());
-		} else {
+		} else if(searchType == SearchType.BM25L) {
 			searcher.setSimilarity(new BM25LSimilarity(1.2F, 0.75F, 0.5F));
+		} else {
+			//empty: default similarity. 
 		}
 		analyzer = createAnalyzer();
 		parser = new QueryParser(CONTENTS, analyzer);
@@ -130,7 +134,7 @@ public class MyIndexSearcher {
 
 	private void doSearchAndFormat(String queryName, String experimentName,
 			Query query, TrecFormatter form) throws IOException {
-		TopDocs result = searcher.search(query, 10);
+		TopDocs result = searcher.search(query, MAX_HITS);
 		form.format(queryName, result, experimentName);
 	}
 }
